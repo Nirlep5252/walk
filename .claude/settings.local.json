@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Walk launcher design document\n\nDefines architecture for a Raycast-style Windows launcher using\nWPF + Wpf.Ui with plugin-based query routing for app search,\ncalculator, currency conversion, system commands, and file search.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(dotnet:*)",
+      "Bash(dotnet --list-sdks:*)",
+      "Bash(where dotnet:*)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(tasklist:*)",
+      "Bash(taskkill:*)"
+    ]
+  }
+}

@@ -1,0 +1,95 @@
+<ui:FluentWindow
+    x:Class="Walk.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:helpers="clr-namespace:Walk.Helpers"
+    Title="Walk"
+    Width="650"
+    SizeToContent="Height"
+    MaxHeight="550"
+    WindowStartupLocation="CenterScreen"
+    ShowInTaskbar="False"
+    Topmost="True"
+    ResizeMode="NoResize"
+    ExtendsContentIntoTitleBar="True"
+    WindowBackdropType="Mica"
+    WindowCornerPreference="Round">
+
+    <ui:FluentWindow.Resources>
+        <helpers:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
+    </ui:FluentWindow.Resources>
+
+    <Grid Margin="0">
+        <StackPanel>
+            <!-- Search Bar -->
+            <ui:TextBox
+                x:Name="SearchBox"
+                PlaceholderText="Search apps, calculate, convert..."
+                FontSize="20"
+                Margin="16,12,16,8"
+                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                Icon="{ui:SymbolIcon Search24}" />
+
+            <!-- Results List -->
+            <ListBox
+                x:Name="ResultsList"
+                ItemsSource="{Binding Results}"
+                SelectedIndex="{Binding SelectedIndex}"
+                Margin="8,0,8,8"
+                MaxHeight="400"
+                BorderThickness="0"
+                Background="Transparent"
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                Visibility="{Binding Results.Count, Converter={StaticResource CountToVisibilityConverter}}">
+
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="4" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="8,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="32" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Icon -->
+                            <Image Grid.Column="0"
+                                   Source="{Binding Icon}"
+                                   Width="24" Height="24"
+                                   VerticalAlignment="Center"
+                                   RenderOptions.BitmapScalingMode="HighQuality" />
+
+                            <!-- Title + Subtitle -->
+                            <StackPanel Grid.Column="1" Margin="8,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Title}"
+                                           FontSize="14"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Subtitle}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+
+                            <!-- Keyboard hint -->
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding Actions[0].KeyGesture}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                       VerticalAlignment="Center"
+                                       Margin="4,0" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>

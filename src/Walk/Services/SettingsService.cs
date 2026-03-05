@@ -1,0 +1,47 @@
+using System.IO;
+using System.Text.Json;
+
+namespace Walk.Services;
+
+public sealed class WalkSettings
+{
+    public string HotkeyModifiers { get; set; } = "Ctrl+Alt";
+    public string HotkeyKey { get; set; } = "Space";
+    public string Theme { get; set; } = "Auto";
+    public int CurrencyCacheTtlHours { get; set; } = 6;
+    public bool StartWithWindows { get; set; } = true;
+    public int MaxResults { get; set; } = 8;
+}
+
+public sealed class SettingsService
+{
+    private readonly string _settingsPath;
+
+    public SettingsService(string dataDir)
+    {
+        Directory.CreateDirectory(dataDir);
+        _settingsPath = Path.Combine(dataDir, "settings.json");
+    }
+
+    public async Task<WalkSettings> LoadAsync()
+    {
+        if (!File.Exists(_settingsPath))
+            return new WalkSettings();
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(_settingsPath);
+            return JsonSerializer.Deserialize<WalkSettings>(json) ?? new WalkSettings();
+        }
+        catch
+        {
+            return new WalkSettings();
+        }
+    }
+
+    public async Task SaveAsync(WalkSettings settings)
+    {
+        var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(_settingsPath, json);
+    }
+}
