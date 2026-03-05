@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using Walk.Helpers;
 using Walk.Plugins;
 using Walk.Services;
 using Walk.ViewModels;
@@ -12,6 +13,8 @@ public partial class App : System.Windows.Application
     private MainWindow? _mainWindow;
     private HotkeyService? _hotkeyService;
     private Forms.NotifyIcon? _trayIcon;
+    private System.Drawing.Icon? _trayDefaultIcon;
+    private System.Drawing.Icon? _trayActiveIcon;
     private AppIndexService? _indexService;
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -57,10 +60,12 @@ public partial class App : System.Windows.Application
                     _mainWindow.ShowLauncher();
                 else
                     _mainWindow.HideLauncher();
+
+                UpdateTrayIcon(viewModel.IsVisible);
             }
         };
 
-        // Hotkey — need a window handle, show briefly then hide
+        // Hotkey - need a window handle, show briefly then hide
         _mainWindow.Show();
         var handle = new System.Windows.Interop.WindowInteropHelper(_mainWindow).Handle;
         _mainWindow.Hide();
@@ -98,16 +103,39 @@ public partial class App : System.Windows.Application
         contextMenu.Items.Add("Quit", null, (_, _) =>
             Current.Dispatcher.Invoke(() => Shutdown()));
 
+        _trayDefaultIcon = EmojiIconGenerator.Create("🚶", 32);
+        _trayActiveIcon = EmojiIconGenerator.Create("🏃", 32);
+
         _trayIcon = new Forms.NotifyIcon
         {
-            Icon = System.Drawing.SystemIcons.Application,
-            Text = "Walk — Ctrl+Alt+Space to launch",
+            Icon = _trayDefaultIcon,
+            Text = "Walk - Ctrl+Alt+Space to launch",
             Visible = true,
             ContextMenuStrip = contextMenu,
         };
 
         _trayIcon.DoubleClick += (_, _) =>
             Current.Dispatcher.Invoke(() => viewModel.Show());
+    }
+
+    private static System.Drawing.Icon? LoadIconResource(string path)
+    {
+        var resource = System.Windows.Application.GetResourceStream(
+            new Uri($"pack://application:,,,/{path}", UriKind.Absolute));
+        if (resource is null)
+            return null;
+
+        using var stream = resource.Stream;
+        using var icon = new System.Drawing.Icon(stream);
+        return (System.Drawing.Icon)icon.Clone();
+    }
+
+    private void UpdateTrayIcon(bool launcherVisible)
+    {
+        if (_trayIcon is null || _trayDefaultIcon is null || _trayActiveIcon is null)
+            return;
+
+        _trayIcon.Icon = launcherVisible ? _trayActiveIcon : _trayDefaultIcon;
     }
 
     private static void ConfigureAutoStart(bool enable)
@@ -146,6 +174,8 @@ public partial class App : System.Windows.Application
             _trayIcon.Visible = false;
             _trayIcon.Dispose();
         }
+        _trayActiveIcon?.Dispose();
+        _trayDefaultIcon?.Dispose();
         base.OnExit(e);
     }
 }
