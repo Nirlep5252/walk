@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 using Walk.ViewModels;
 
 namespace Walk;
@@ -7,6 +9,7 @@ namespace Walk;
 public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 {
     private readonly MainViewModel _viewModel;
+    private Storyboard? _currentStoryboard;
 
     public MainWindow(MainViewModel viewModel)
     {
@@ -61,13 +64,79 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         Left = (screen.Width - Width) / 2 + screen.Left;
         Top = screen.Height * 0.2 + screen.Top;
 
+        // Cancel any running animation
+        _currentStoryboard?.Stop(this);
+
+        // Set initial state
+        Opacity = 0;
+        RootScaleTransform.ScaleX = 0.97;
+        RootScaleTransform.ScaleY = 0.97;
+
         Show();
         Activate();
         SearchBox.Focus();
+
+        // Animate in
+        var duration = TimeSpan.FromMilliseconds(150);
+        var ease = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+
+        var opacityAnim = new DoubleAnimation(0, 1, new Duration(duration)) { EasingFunction = ease };
+        var scaleXAnim = new DoubleAnimation(0.97, 1.0, new Duration(duration)) { EasingFunction = ease };
+        var scaleYAnim = new DoubleAnimation(0.97, 1.0, new Duration(duration)) { EasingFunction = ease };
+
+        var storyboard = new Storyboard();
+        storyboard.Children.Add(opacityAnim);
+        storyboard.Children.Add(scaleXAnim);
+        storyboard.Children.Add(scaleYAnim);
+
+        Storyboard.SetTarget(opacityAnim, this);
+        Storyboard.SetTargetProperty(opacityAnim, new PropertyPath(OpacityProperty));
+
+        Storyboard.SetTarget(scaleXAnim, RootScaleTransform);
+        Storyboard.SetTargetProperty(scaleXAnim, new PropertyPath(ScaleTransform.ScaleXProperty));
+
+        Storyboard.SetTarget(scaleYAnim, RootScaleTransform);
+        Storyboard.SetTargetProperty(scaleYAnim, new PropertyPath(ScaleTransform.ScaleYProperty));
+
+        _currentStoryboard = storyboard;
+        storyboard.Begin(this);
     }
 
     public void HideLauncher()
     {
-        Hide();
+        // Cancel any running animation
+        _currentStoryboard?.Stop(this);
+
+        var duration = TimeSpan.FromMilliseconds(100);
+        var ease = new QuadraticEase { EasingMode = EasingMode.EaseIn };
+
+        var opacityAnim = new DoubleAnimation(Opacity, 0, new Duration(duration)) { EasingFunction = ease };
+        var scaleXAnim = new DoubleAnimation(RootScaleTransform.ScaleX, 0.97, new Duration(duration)) { EasingFunction = ease };
+        var scaleYAnim = new DoubleAnimation(RootScaleTransform.ScaleY, 0.97, new Duration(duration)) { EasingFunction = ease };
+
+        var storyboard = new Storyboard();
+        storyboard.Children.Add(opacityAnim);
+        storyboard.Children.Add(scaleXAnim);
+        storyboard.Children.Add(scaleYAnim);
+
+        Storyboard.SetTarget(opacityAnim, this);
+        Storyboard.SetTargetProperty(opacityAnim, new PropertyPath(OpacityProperty));
+
+        Storyboard.SetTarget(scaleXAnim, RootScaleTransform);
+        Storyboard.SetTargetProperty(scaleXAnim, new PropertyPath(ScaleTransform.ScaleXProperty));
+
+        Storyboard.SetTarget(scaleYAnim, RootScaleTransform);
+        Storyboard.SetTargetProperty(scaleYAnim, new PropertyPath(ScaleTransform.ScaleYProperty));
+
+        storyboard.Completed += (_, _) =>
+        {
+            Hide();
+            Opacity = 1;
+            RootScaleTransform.ScaleX = 1;
+            RootScaleTransform.ScaleY = 1;
+        };
+
+        _currentStoryboard = storyboard;
+        storyboard.Begin(this);
     }
 }

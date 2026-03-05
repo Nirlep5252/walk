@@ -2,94 +2,424 @@
     x:Class="Walk.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:helpers="clr-namespace:Walk.Helpers"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="Walk"
-    Width="650"
+    Width="740"
+    MinHeight="300"
+    MaxHeight="640"
     SizeToContent="Height"
-    MaxHeight="550"
     WindowStartupLocation="CenterScreen"
     ShowInTaskbar="False"
     Topmost="True"
     ResizeMode="NoResize"
     ExtendsContentIntoTitleBar="True"
     WindowBackdropType="Mica"
-    WindowCornerPreference="Round">
+    WindowCornerPreference="Round"
+    Background="Transparent"
+    FontFamily="Segoe UI Variable Text">
 
     <ui:FluentWindow.Resources>
         <helpers:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
+        <helpers:ZeroCountToVisibilityConverter x:Key="ZeroCountToVisibilityConverter" />
+
+        <SolidColorBrush x:Key="ShellBackgroundBrush" Color="#EC0F141D" />
+        <SolidColorBrush x:Key="ShellBorderBrush" Color="#527EA6E0" />
+        <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#4A1A2636" />
+        <SolidColorBrush x:Key="PanelBorderBrush" Color="#35FFFFFF" />
+        <SolidColorBrush x:Key="ResultDefaultBrush" Color="#12000000" />
+        <SolidColorBrush x:Key="ResultHoverBrush" Color="#324D8FC9" />
+        <SolidColorBrush x:Key="ResultSelectedBrush" Color="#5666A2DF" />
+        <SolidColorBrush x:Key="ResultBorderBrush" Color="#2DFFFFFF" />
+        <SolidColorBrush x:Key="BadgeBackgroundBrush" Color="#3E1F2E48" />
+        <SolidColorBrush x:Key="BadgeBorderBrush" Color="#628BC1FF" />
+        <SolidColorBrush x:Key="HintTextBrush" Color="#A0C0D7F5" />
+
+        <DropShadowEffect
+            x:Key="ShellShadowEffect"
+            BlurRadius="36"
+            Color="#A7000000"
+            Direction="270"
+            Opacity="0.75"
+            ShadowDepth="10" />
+
+        <Style x:Key="ResultItemStyle" TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border
+                            x:Name="ItemChrome"
+                            CornerRadius="12"
+                            Padding="12,10"
+                            RenderTransformOrigin="0.5,0.5"
+                            BorderThickness="1">
+                            <Border.Background>
+                                <SolidColorBrush x:Name="ItemBg" Color="#12000000" />
+                            </Border.Background>
+                            <Border.BorderBrush>
+                                <SolidColorBrush x:Name="ItemBorder" Color="#2DFFFFFF" />
+                            </Border.BorderBrush>
+                            <Border.RenderTransform>
+                                <ScaleTransform ScaleX="1" ScaleY="1" />
+                            </Border.RenderTransform>
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation
+                                                Storyboard.TargetName="ItemBg"
+                                                Storyboard.TargetProperty="Color"
+                                                To="#324D8FC9"
+                                                Duration="0:0:0.10" />
+                                            <ColorAnimation
+                                                Storyboard.TargetName="ItemBorder"
+                                                Storyboard.TargetProperty="Color"
+                                                To="#64B3D8FF"
+                                                Duration="0:0:0.10" />
+                                            <DoubleAnimation
+                                                Storyboard.TargetName="ItemChrome"
+                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                To="1.01"
+                                                Duration="0:0:0.10" />
+                                            <DoubleAnimation
+                                                Storyboard.TargetName="ItemChrome"
+                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                To="1.01"
+                                                Duration="0:0:0.10" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation
+                                                Storyboard.TargetName="ItemBg"
+                                                Storyboard.TargetProperty="Color"
+                                                To="#12000000"
+                                                Duration="0:0:0.10" />
+                                            <ColorAnimation
+                                                Storyboard.TargetName="ItemBorder"
+                                                Storyboard.TargetProperty="Color"
+                                                To="#2DFFFFFF"
+                                                Duration="0:0:0.10" />
+                                            <DoubleAnimation
+                                                Storyboard.TargetName="ItemChrome"
+                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                To="1.0"
+                                                Duration="0:0:0.10" />
+                                            <DoubleAnimation
+                                                Storyboard.TargetName="ItemChrome"
+                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                To="1.0"
+                                                Duration="0:0:0.10" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation
+                                                Storyboard.TargetName="ItemBg"
+                                                Storyboard.TargetProperty="Color"
+                                                To="#5666A2DF"
+                                                Duration="0:0:0.12" />
+                                            <ColorAnimation
+                                                Storyboard.TargetName="ItemBorder"
+                                                Storyboard.TargetProperty="Color"
+                                                To="#88CAE5FF"
+                                                Duration="0:0:0.12" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation
+                                                Storyboard.TargetName="ItemBg"
+                                                Storyboard.TargetProperty="Color"
+                                                To="#12000000"
+                                                Duration="0:0:0.12" />
+                                            <ColorAnimation
+                                                Storyboard.TargetName="ItemBorder"
+                                                Storyboard.TargetProperty="Color"
+                                                To="#2DFFFFFF"
+                                                Duration="0:0:0.12" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ItemChrome" Property="Opacity" Value="0.6" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </ui:FluentWindow.Resources>
 
-    <Grid Margin="0">
-        <StackPanel>
-            <!-- Search Bar -->
-            <ui:TextBox
-                x:Name="SearchBox"
-                PlaceholderText="Search apps, calculate, convert..."
-                FontSize="20"
-                Margin="16,12,16,8"
-                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                Icon="{ui:SymbolIcon Search24}" />
+    <Grid x:Name="RootGrid" Margin="14" RenderTransformOrigin="0.5,0.5">
+        <Grid.RenderTransform>
+            <ScaleTransform x:Name="RootScaleTransform" ScaleX="1" ScaleY="1" />
+        </Grid.RenderTransform>
+        <Border
+            Background="{StaticResource ShellBackgroundBrush}"
+            BorderBrush="{StaticResource ShellBorderBrush}"
+            BorderThickness="1.4"
+            CornerRadius="18"
+            Padding="18,16,18,14"
+            Effect="{StaticResource ShellShadowEffect}">
 
-            <!-- Results List -->
-            <ListBox
-                x:Name="ResultsList"
-                ItemsSource="{Binding Results}"
-                SelectedIndex="{Binding SelectedIndex}"
-                Margin="8,0,8,8"
-                MaxHeight="400"
-                BorderThickness="0"
-                Background="Transparent"
-                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                Visibility="{Binding Results.Count, Converter={StaticResource CountToVisibilityConverter}}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-                <ListBox.ItemContainerStyle>
-                    <Style TargetType="ListBoxItem">
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                        <Setter Property="Padding" Value="4" />
-                    </Style>
-                </ListBox.ItemContainerStyle>
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <Grid Margin="8,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="32" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock
+                            Text="&#x1F6B6;"
+                            FontFamily="Segoe UI Emoji"
+                            FontSize="26"
+                            VerticalAlignment="Center" />
 
-                            <!-- Icon -->
-                            <Image Grid.Column="0"
-                                   Source="{Binding Icon}"
-                                   Width="24" Height="24"
-                                   VerticalAlignment="Center"
-                                   RenderOptions.BitmapScalingMode="HighQuality" />
+                        <StackPanel Margin="10,0,0,0">
+                            <TextBlock
+                                Text="Walk"
+                                FontFamily="Segoe UI Variable Display Semibold"
+                                FontSize="18"
+                                Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock
+                                Text="Search apps, files, system commands, math, and currency."
+                                FontSize="12"
+                                Foreground="{StaticResource HintTextBrush}" />
+                        </StackPanel>
+                    </StackPanel>
 
-                            <!-- Title + Subtitle -->
-                            <StackPanel Grid.Column="1" Margin="8,0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Title}"
-                                           FontSize="14"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                           TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding Subtitle}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
+                    <Border
+                        Grid.Column="1"
+                        Padding="10,4"
+                        CornerRadius="10"
+                        Background="{StaticResource BadgeBackgroundBrush}"
+                        BorderBrush="{StaticResource BadgeBorderBrush}"
+                        BorderThickness="1"
+                        VerticalAlignment="Center">
+                        <TextBlock
+                            Text="Ctrl+Alt+Space"
+                            FontSize="11"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    </Border>
+                </Grid>
 
-                            <!-- Keyboard hint -->
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding Actions[0].KeyGesture}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                       VerticalAlignment="Center"
-                                       Margin="4,0" />
-                        </Grid>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </StackPanel>
+                <Border
+                    Grid.Row="1"
+                    Margin="0,0,0,12"
+                    Padding="2"
+                    CornerRadius="12"
+                    Background="#66161D2A"
+                    BorderBrush="#6FB6D7FF"
+                    BorderThickness="1.2">
+                    <ui:TextBox
+                        x:Name="SearchBox"
+                        PlaceholderText="Type to search, calculate, convert, or run..."
+                        FontFamily="Segoe UI Variable Display"
+                        FontSize="21"
+                        Padding="8,4"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                        Icon="{ui:SymbolIcon Search24}" />
+                </Border>
+
+                <Grid Grid.Row="2" Margin="2,0,2,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock
+                        Text="Top matches"
+                        FontSize="12"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource HintTextBrush}" />
+
+                    <TextBlock
+                        Grid.Column="1"
+                        Text="{Binding Results.Count, StringFormat={}{0} shown}"
+                        FontSize="11"
+                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </Grid>
+
+                <Border
+                    Grid.Row="3"
+                    CornerRadius="14"
+                    Background="{StaticResource PanelBackgroundBrush}"
+                    BorderBrush="{StaticResource PanelBorderBrush}"
+                    BorderThickness="1"
+                    Padding="12">
+
+                    <Grid>
+                        <ListBox
+                            x:Name="ResultsList"
+                            ItemsSource="{Binding Results}"
+                            SelectedIndex="{Binding SelectedIndex}"
+                            MaxHeight="420"
+                            BorderThickness="0"
+                            Background="Transparent"
+                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                            ItemContainerStyle="{StaticResource ResultItemStyle}"
+                            Visibility="{Binding Results.Count, Converter={StaticResource CountToVisibilityConverter}}">
+
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="36" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border
+                                            Grid.Column="0"
+                                            Width="34"
+                                            Height="34"
+                                            CornerRadius="9"
+                                            Background="#341E2D44"
+                                            BorderBrush="#4A8DB9EA"
+                                            BorderThickness="1"
+                                            VerticalAlignment="Center">
+                                            <Image
+                                                Source="{Binding Icon}"
+                                                Width="20"
+                                                Height="20"
+                                                VerticalAlignment="Center"
+                                                HorizontalAlignment="Center"
+                                                RenderOptions.BitmapScalingMode="HighQuality" />
+                                        </Border>
+
+                                        <StackPanel Grid.Column="1" Margin="10,0,10,0" VerticalAlignment="Center">
+                                            <TextBlock
+                                                Text="{Binding Title}"
+                                                FontSize="14"
+                                                FontWeight="SemiBold"
+                                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                TextTrimming="CharacterEllipsis" />
+                                            <TextBlock
+                                                Text="{Binding Subtitle}"
+                                                FontSize="11"
+                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                            <Border
+                                                Padding="8,2"
+                                                CornerRadius="9"
+                                                Background="{StaticResource BadgeBackgroundBrush}"
+                                                BorderBrush="{StaticResource BadgeBorderBrush}"
+                                                BorderThickness="1"
+                                                HorizontalAlignment="Right">
+                                                <TextBlock
+                                                    Text="{Binding PluginName}"
+                                                    FontSize="10"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                            </Border>
+                                            <TextBlock
+                                                Margin="0,4,0,0"
+                                                Text="{Binding Actions[0].KeyGesture}"
+                                                FontSize="10"
+                                                HorizontalAlignment="Right"
+                                                Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <StackPanel
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding Results.Count, Converter={StaticResource ZeroCountToVisibilityConverter}}">
+                            <TextBlock
+                                Text="&#x1F50D;"
+                                FontFamily="Segoe UI Emoji"
+                                FontSize="32"
+                                HorizontalAlignment="Center"
+                                Margin="0,0,0,8">
+                                <TextBlock.Triggers>
+                                    <EventTrigger RoutedEvent="Loaded">
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation
+                                                    Storyboard.TargetProperty="Opacity"
+                                                    From="0.6"
+                                                    To="1.0"
+                                                    Duration="0:0:2"
+                                                    AutoReverse="True"
+                                                    RepeatBehavior="Forever" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </EventTrigger>
+                                </TextBlock.Triggers>
+                            </TextBlock>
+                            <TextBlock
+                                Text="Start typing to launch something"
+                                FontSize="17"
+                                FontFamily="Segoe UI Variable Display Semibold"
+                                HorizontalAlignment="Center"
+                                Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock
+                                Margin="0,6,0,0"
+                                FontSize="12"
+                                HorizontalAlignment="Center"
+                                Foreground="{StaticResource HintTextBrush}">
+                                <TextBlock.Text>Try: edge, calc 42*19, usd to eur, file readme</TextBlock.Text>
+                                <TextBlock.Triggers>
+                                    <EventTrigger RoutedEvent="Loaded">
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation
+                                                    Storyboard.TargetProperty="Opacity"
+                                                    From="0.6"
+                                                    To="1.0"
+                                                    Duration="0:0:2"
+                                                    AutoReverse="True"
+                                                    RepeatBehavior="Forever" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </EventTrigger>
+                                </TextBlock.Triggers>
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <TextBlock
+                    Grid.Row="4"
+                    Margin="2,10,2,0"
+                    Text="Enter: Run   |   Ctrl+Enter: Run as admin   |   Esc: Hide"
+                    FontSize="11"
+                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </Grid>
+        </Border>
     </Grid>
 </ui:FluentWindow>
