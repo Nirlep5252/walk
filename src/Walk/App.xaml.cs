@@ -103,8 +103,8 @@ public partial class App : System.Windows.Application
         contextMenu.Items.Add("Quit", null, (_, _) =>
             Current.Dispatcher.Invoke(() => Shutdown()));
 
-        _trayDefaultIcon = EmojiIconGenerator.Create("🚶", 32);
-        _trayActiveIcon = EmojiIconGenerator.Create("🏃", 32);
+        _trayDefaultIcon = TrayIconGenerator.Create(32);
+        _trayActiveIcon = TrayIconGenerator.Create(32, active: true);
 
         _trayIcon = new Forms.NotifyIcon
         {

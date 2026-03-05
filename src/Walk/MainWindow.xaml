@@ -194,11 +194,19 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock
-                            Text="&#x1F6B6;"
-                            FontFamily="Segoe UI Emoji"
-                            FontSize="26"
-                            VerticalAlignment="Center" />
+                        <Border
+                            Width="32"
+                            Height="32"
+                            CornerRadius="8"
+                            Background="#5F4D8FC9"
+                            BorderBrush="#88B2D9FF"
+                            BorderThickness="1"
+                            VerticalAlignment="Center">
+                            <ui:SymbolIcon
+                                Symbol="Rocket24"
+                                FontSize="18"
+                                Foreground="#F0FFFFFF" />
+                        </Border>
 
                         <StackPanel Margin="10,0,0,0">
                             <TextBlock
@@ -359,28 +367,28 @@
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Visibility="{Binding Results.Count, Converter={StaticResource ZeroCountToVisibilityConverter}}">
-                            <TextBlock
-                                Text="&#x1F50D;"
-                                FontFamily="Segoe UI Emoji"
-                                FontSize="32"
+                            <ui:SymbolIcon
+                                Symbol="Search24"
+                                FontSize="36"
+                                Foreground="{StaticResource HintTextBrush}"
                                 HorizontalAlignment="Center"
                                 Margin="0,0,0,8">
-                                <TextBlock.Triggers>
+                                <ui:SymbolIcon.Triggers>
                                     <EventTrigger RoutedEvent="Loaded">
                                         <BeginStoryboard>
                                             <Storyboard>
                                                 <DoubleAnimation
                                                     Storyboard.TargetProperty="Opacity"
-                                                    From="0.6"
-                                                    To="1.0"
+                                                    From="0.5"
+                                                    To="0.9"
                                                     Duration="0:0:2"
                                                     AutoReverse="True"
                                                     RepeatBehavior="Forever" />
                                             </Storyboard>
                                         </BeginStoryboard>
                                     </EventTrigger>
-                                </TextBlock.Triggers>
-                            </TextBlock>
+                                </ui:SymbolIcon.Triggers>
+                            </ui:SymbolIcon>
                             <TextBlock
                                 Text="Start typing to launch something"
                                 FontSize="17"
