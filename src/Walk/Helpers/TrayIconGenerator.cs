@@ -30,16 +30,21 @@ public static class TrayIconGenerator
         graphics.FillPath(bgBrush, path);
         graphics.DrawPath(borderPen, path);
 
-        // Draw "W" letter
         var fontSize = size * 0.55f;
         using var font = new Font("Segoe UI", fontSize, FontStyle.Bold, GraphicsUnit.Pixel);
-        using var textBrush = new SolidBrush(Color.FromArgb(240, 255, 255, 255));
+        using var format = new StringFormat
+        {
+            Alignment = StringAlignment.Center,
+            LineAlignment = StringAlignment.Center,
+        };
 
-        var textSize = graphics.MeasureString("W", font);
-        var x = (size - textSize.Width) / 2f;
-        var y = (size - textSize.Height) / 2f;
+        var textRect = new RectangleF(
+            rect.X,
+            rect.Y - (size * 0.04f),
+            rect.Width,
+            rect.Height + (size * 0.08f));
 
-        graphics.DrawString("W", font, textBrush, x, y);
+        graphics.DrawString(Branding.LogoGlyph, font, Brushes.White, textRect, format);
 
         var hIcon = bitmap.GetHicon();
         return Icon.FromHandle(hIcon);

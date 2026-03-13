@@ -13,9 +13,12 @@ public partial class App : System.Windows.Application
     private MainWindow? _mainWindow;
     private HotkeyService? _hotkeyService;
     private Forms.NotifyIcon? _trayIcon;
+    private Forms.ToolStripMenuItem? _trayStatusItem;
+    private Forms.ToolStripMenuItem? _checkForUpdatesItem;
     private System.Drawing.Icon? _trayDefaultIcon;
     private System.Drawing.Icon? _trayActiveIcon;
     private AppIndexService? _indexService;
+    private UpdateService? _updateService;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -32,6 +35,7 @@ public partial class App : System.Windows.Application
         // Services
         var cacheService = new CacheService(dataDir);
         _indexService = new AppIndexService(dataDir);
+        _updateService = new UpdateService();
         await _indexService.BuildIndexAsync();
         _indexService.StartWatching();
 
@@ -50,6 +54,13 @@ public partial class App : System.Windows.Application
 
         // Main window
         _mainWindow = new MainWindow(viewModel);
+        _updateService.StatusChanged += (_, args) =>
+        {
+            Current.Dispatcher.Invoke(() =>
+            {
+                UpdateTrayStatus(args.StatusText);
+            });
+        };
 
         // Bind visibility
         viewModel.PropertyChanged += (_, args) =>
@@ -91,12 +102,26 @@ public partial class App : System.Windows.Application
         ConfigureAutoStart(settings.StartWithWindows);
 
         // System tray
-        SetupTray(viewModel);
+        SetupTray(viewModel, _updateService);
+        _updateService.Start();
     }
 
-    private void SetupTray(MainViewModel viewModel)
+    private void SetupTray(MainViewModel viewModel, UpdateService updateService)
     {
         var contextMenu = new Forms.ContextMenuStrip();
+        _trayStatusItem = new Forms.ToolStripMenuItem(updateService.StatusText)
+        {
+            Enabled = false,
+        };
+        _checkForUpdatesItem = new Forms.ToolStripMenuItem("Check for Updates")
+        {
+            Enabled = updateService.CanCheckForUpdates,
+        };
+        _checkForUpdatesItem.Click += async (_, _) => await updateService.CheckForUpdatesAsync(manual: true);
+
+        contextMenu.Items.Add(_trayStatusItem);
+        contextMenu.Items.Add(_checkForUpdatesItem);
+        contextMenu.Items.Add(new Forms.ToolStripSeparator());
         contextMenu.Items.Add("Show Launcher", null, (_, _) =>
             Current.Dispatcher.Invoke(() => viewModel.Show()));
         contextMenu.Items.Add(new Forms.ToolStripSeparator());
@@ -109,7 +134,7 @@ public partial class App : System.Windows.Application
         _trayIcon = new Forms.NotifyIcon
         {
             Icon = _trayDefaultIcon,
-            Text = "Walk - Ctrl+Alt+Space to launch",
+            Text = BuildTrayTooltip(updateService.Version),
             Visible = true,
             ContextMenuStrip = contextMenu,
         };
@@ -136,6 +161,18 @@ public partial class App : System.Windows.Application
             return;
 
         _trayIcon.Icon = launcherVisible ? _trayActiveIcon : _trayDefaultIcon;
+    }
+
+    private static string BuildTrayTooltip(string version)
+    {
+        var tooltip = $"Walk v{version}";
+        return tooltip.Length <= 63 ? tooltip : tooltip[..63];
+    }
+
+    private void UpdateTrayStatus(string statusText)
+    {
+        if (_trayStatusItem is not null)
+            _trayStatusItem.Text = statusText;
     }
 
     private static void ConfigureAutoStart(bool enable)
@@ -169,6 +206,7 @@ public partial class App : System.Windows.Application
     {
         _hotkeyService?.Dispose();
         _indexService?.Dispose();
+        _updateService?.Dispose();
         if (_trayIcon is not null)
         {
             _trayIcon.Visible = false;

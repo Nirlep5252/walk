@@ -1,6 +1,8 @@
 # .NET build outputs
 bin/
 obj/
+artifacts/
+Releases/
 
 # IDE files
 .vs/

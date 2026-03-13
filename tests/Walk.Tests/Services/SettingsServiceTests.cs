@@ -26,7 +26,7 @@ public class SettingsServiceTests : IDisposable
         var service = new SettingsService(_testDir);
         var settings = await service.LoadAsync();
 
-        settings.HotkeyModifiers.Should().Be("Alt");
+        settings.HotkeyModifiers.Should().Be("Ctrl+Alt");
         settings.HotkeyKey.Should().Be("Space");
         settings.CurrencyCacheTtlHours.Should().Be(6);
         settings.StartWithWindows.Should().BeTrue();

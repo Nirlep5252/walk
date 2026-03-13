@@ -147,16 +147,18 @@
 
         <DockPanel LastChildFill="True">
 
-            <!-- Bottom bar: only visible when results exist -->
+            <!-- Bottom bar -->
             <Border
                 DockPanel.Dock="Bottom"
                 Padding="14,7,14,9"
                 BorderThickness="0,1,0,0"
-                BorderBrush="#0AFFFFFF"
-                Visibility="{Binding Results.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                BorderBrush="#0AFFFFFF">
                 <Grid>
                     <!-- Right: keyboard hints -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <StackPanel
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Visibility="{Binding Results.Count, Converter={StaticResource CountToVisibilityConverter}}">
                         <StackPanel Orientation="Horizontal" Margin="0,0,12,0">
                             <Border Style="{StaticResource KbdBadge}">
                                 <TextBlock Text="↵" Style="{StaticResource KbdText}" />
