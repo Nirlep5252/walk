@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Interop;
 using Walk.Helpers;
 using Walk.Plugins;
 using Walk.Services;
@@ -19,6 +20,10 @@ public partial class App : System.Windows.Application
     private System.Drawing.Icon? _trayActiveIcon;
     private AppIndexService? _indexService;
     private UpdateService? _updateService;
+    private SettingsService? _settingsService;
+    private WalkSettings _settings = new();
+    private SettingsWindow? _settingsWindow;
+    private SettingsViewModel? _settingsViewModel;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -29,8 +34,8 @@ public partial class App : System.Windows.Application
         Directory.CreateDirectory(dataDir);
 
         // Settings
-        var settingsService = new SettingsService(dataDir);
-        var settings = await settingsService.LoadAsync();
+        _settingsService = new SettingsService(dataDir);
+        _settings = await _settingsService.LoadAsync();
 
         // Services
         var cacheService = new CacheService(dataDir);
@@ -43,14 +48,14 @@ public partial class App : System.Windows.Application
         var plugins = new IQueryPlugin[]
         {
             new CalculatorPlugin(),
-            new CurrencyPlugin(cacheService, TimeSpan.FromHours(settings.CurrencyCacheTtlHours)),
+            new CurrencyPlugin(cacheService, TimeSpan.FromHours(_settings.CurrencyCacheTtlHours)),
             new SystemCommandPlugin(),
             new FileSearchPlugin(),
             new AppSearchPlugin(_indexService),
         };
 
         var router = new QueryRouter(plugins);
-        var viewModel = new MainViewModel(router, settings.MaxResults);
+        var viewModel = new MainViewModel(router, _settings.MaxResults);
 
         // Main window
         _mainWindow = new MainWindow(viewModel);
@@ -82,16 +87,38 @@ public partial class App : System.Windows.Application
         _mainWindow.Hide();
 
         _hotkeyService = new HotkeyService();
-        if (!_hotkeyService.Register(handle))
+        if (!TryRegisterHotkey(_settings, out var errorMessage))
         {
-            System.Windows.MessageBox.Show(
-                "Could not register Ctrl+Alt+Space hotkey. Another application may be using it.",
-                "Walk", MessageBoxButton.OK, MessageBoxImage.Warning);
+            var defaultSettings = new WalkSettings();
+            var fallbackApplied =
+                (_settings.HotkeyModifiers != defaultSettings.HotkeyModifiers ||
+                 _settings.HotkeyKey != defaultSettings.HotkeyKey) &&
+                TryRegisterHotkey(defaultSettings, out _);
+
+            if (fallbackApplied)
+            {
+                _settings.HotkeyModifiers = defaultSettings.HotkeyModifiers;
+                _settings.HotkeyKey = defaultSettings.HotkeyKey;
+                await _settingsService.SaveAsync(_settings);
+
+                errorMessage = $"{errorMessage} Walk reverted to {HotkeyService.FormatDisplayText(_settings.HotkeyModifiers, _settings.HotkeyKey)}.";
+            }
+
+            System.Windows.MessageBox.Show(errorMessage, "Walk", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         _hotkeyService.HotkeyPressed += () =>
         {
-            Current.Dispatcher.Invoke(() => viewModel.Toggle());
+            Current.Dispatcher.Invoke(() =>
+            {
+                if (_settingsViewModel?.IsRecording == true)
+                {
+                    _settingsViewModel.ApplyRecordedHotkey(_settings.HotkeyModifiers, _settings.HotkeyKey);
+                    return;
+                }
+
+                viewModel.Toggle();
+            });
         };
 
         // Watch system theme
@@ -99,7 +126,7 @@ public partial class App : System.Windows.Application
         Wpf.Ui.Appearance.SystemThemeWatcher.Watch(_mainWindow);
 
         // Auto-start
-        ConfigureAutoStart(settings.StartWithWindows);
+        ConfigureAutoStart(_settings.StartWithWindows);
 
         // System tray
         SetupTray(viewModel, _updateService);
@@ -124,6 +151,8 @@ public partial class App : System.Windows.Application
         contextMenu.Items.Add(new Forms.ToolStripSeparator());
         contextMenu.Items.Add("Show Launcher", null, (_, _) =>
             Current.Dispatcher.Invoke(() => viewModel.Show()));
+        contextMenu.Items.Add("Settings", null, (_, _) =>
+            Current.Dispatcher.Invoke(ShowSettings));
         contextMenu.Items.Add(new Forms.ToolStripSeparator());
         contextMenu.Items.Add("Quit", null, (_, _) =>
             Current.Dispatcher.Invoke(() => Shutdown()));
@@ -173,6 +202,81 @@ public partial class App : System.Windows.Application
     {
         if (_trayStatusItem is not null)
             _trayStatusItem.Text = statusText;
+    }
+
+    private bool TryRegisterHotkey(WalkSettings settings, out string errorMessage)
+    {
+        if (_mainWindow is null || _hotkeyService is null)
+        {
+            errorMessage = "Walk could not initialize the global hotkey.";
+            return false;
+        }
+
+        var handle = new WindowInteropHelper(_mainWindow).Handle;
+        return _hotkeyService.Register(
+            handle,
+            settings.HotkeyModifiers,
+            settings.HotkeyKey,
+            out errorMessage);
+    }
+
+    private async void ShowSettings()
+    {
+        if (_settingsService is null)
+            return;
+
+        if (_settingsWindow is not null)
+        {
+            _settingsWindow.Activate();
+            return;
+        }
+
+        var settingsViewModel = new SettingsViewModel(_settings, AppVersionService.GetDisplayVersion());
+        var settingsWindow = new SettingsWindow(settingsViewModel);
+
+        _settingsViewModel = settingsViewModel;
+        _settingsWindow = settingsWindow;
+        settingsWindow.Owner = _mainWindow;
+        settingsWindow.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_settingsWindow, settingsWindow))
+                _settingsWindow = null;
+
+            if (ReferenceEquals(_settingsViewModel, settingsViewModel))
+                _settingsViewModel = null;
+        };
+
+        var result = settingsWindow.ShowDialog();
+        if (result != true)
+            return;
+
+        var updatedSettings = settingsViewModel.BuildSettings();
+        var previousSettings = _settings.Clone();
+        if (!TryRegisterHotkey(updatedSettings, out var errorMessage))
+        {
+            TryRegisterHotkey(previousSettings, out _);
+            System.Windows.MessageBox.Show(
+                $"{errorMessage} Walk kept {HotkeyService.FormatDisplayText(previousSettings.HotkeyModifiers, previousSettings.HotkeyKey)}.",
+                "Walk",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        _settings = updatedSettings;
+
+        try
+        {
+            await _settingsService.SaveAsync(_settings);
+        }
+        catch
+        {
+            System.Windows.MessageBox.Show(
+                "Walk applied the new hotkey for this session, but could not save settings to disk.",
+                "Walk",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
     }
 
     private static void ConfigureAutoStart(bool enable)

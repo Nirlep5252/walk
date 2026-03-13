@@ -5,12 +5,25 @@ namespace Walk.Services;
 
 public sealed class WalkSettings
 {
-    public string HotkeyModifiers { get; set; } = "Ctrl+Alt";
-    public string HotkeyKey { get; set; } = "Space";
+    public string HotkeyModifiers { get; set; } = HotkeyService.DefaultModifiers;
+    public string HotkeyKey { get; set; } = HotkeyService.DefaultKey;
     public string Theme { get; set; } = "Auto";
     public int CurrencyCacheTtlHours { get; set; } = 6;
     public bool StartWithWindows { get; set; } = true;
     public int MaxResults { get; set; } = 8;
+
+    public WalkSettings Clone()
+    {
+        return new WalkSettings
+        {
+            HotkeyModifiers = HotkeyModifiers,
+            HotkeyKey = HotkeyKey,
+            Theme = Theme,
+            CurrencyCacheTtlHours = CurrencyCacheTtlHours,
+            StartWithWindows = StartWithWindows,
+            MaxResults = MaxResults,
+        };
+    }
 }
 
 public sealed class SettingsService

@@ -38,12 +38,16 @@ public class SettingsServiceTests : IDisposable
     {
         var service = new SettingsService(_testDir);
         var settings = await service.LoadAsync();
+        settings.HotkeyModifiers = "Ctrl+Shift";
+        settings.HotkeyKey = "K";
         settings.MaxResults = 15;
         settings.CurrencyCacheTtlHours = 12;
 
         await service.SaveAsync(settings);
 
         var reloaded = await service.LoadAsync();
+        reloaded.HotkeyModifiers.Should().Be("Ctrl+Shift");
+        reloaded.HotkeyKey.Should().Be("K");
         reloaded.MaxResults.Should().Be(15);
         reloaded.CurrencyCacheTtlHours.Should().Be(12);
     }
