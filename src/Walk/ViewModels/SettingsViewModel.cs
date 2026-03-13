@@ -23,6 +23,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "";
 
+    [ObservableProperty]
+    private bool _autoStartOnLogin;
+
     public event Action? SaveRequested;
     public event Action? CancelRequested;
 
@@ -34,7 +37,8 @@ public partial class SettingsViewModel : ObservableObject
 
     public bool HasUnsavedChanges =>
         HotkeyService.CoerceModifiers(_settings.HotkeyModifiers) != HotkeyService.CoerceModifiers(HotkeyModifiers) ||
-        HotkeyService.CoerceKey(_settings.HotkeyKey) != HotkeyService.CoerceKey(HotkeyKey);
+        HotkeyService.CoerceKey(_settings.HotkeyKey) != HotkeyService.CoerceKey(HotkeyKey) ||
+        _settings.StartWithWindows != AutoStartOnLogin;
 
     public bool ShouldShowResetHotkey =>
         HotkeyService.CoerceModifiers(HotkeyModifiers) != ResetHotkeyModifiers ||
@@ -46,6 +50,7 @@ public partial class SettingsViewModel : ObservableObject
         DisplayVersion = $"Version {displayVersion}";
         _hotkeyModifiers = HotkeyService.CoerceModifiers(_settings.HotkeyModifiers);
         _hotkeyKey = HotkeyService.CoerceKey(_settings.HotkeyKey);
+        _autoStartOnLogin = _settings.StartWithWindows;
     }
 
     public WalkSettings BuildSettings()
@@ -53,6 +58,7 @@ public partial class SettingsViewModel : ObservableObject
         var updatedSettings = _settings.Clone();
         updatedSettings.HotkeyModifiers = HotkeyService.CoerceModifiers(HotkeyModifiers);
         updatedSettings.HotkeyKey = HotkeyService.CoerceKey(HotkeyKey);
+        updatedSettings.StartWithWindows = AutoStartOnLogin;
         return updatedSettings;
     }
 
@@ -150,6 +156,11 @@ public partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(HotkeyButtonText));
         ResetHotkeyCommand.NotifyCanExecuteChanged();
         SaveCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnAutoStartOnLoginChanged(bool value)
+    {
+        NotifyStateChanged();
     }
 
     private bool CanSave()

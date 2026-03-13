@@ -268,11 +268,12 @@ public partial class App : System.Windows.Application
         try
         {
             await _settingsService.SaveAsync(_settings);
+            ConfigureAutoStart(_settings.StartWithWindows);
         }
         catch
         {
             System.Windows.MessageBox.Show(
-                "Walk applied the new hotkey for this session, but could not save settings to disk.",
+                "Walk could not save settings to disk. Some changes may remain active until Walk restarts, but they were not persisted.",
                 "Walk",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);

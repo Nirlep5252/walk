@@ -42,6 +42,7 @@ public class SettingsServiceTests : IDisposable
         settings.HotkeyKey = "K";
         settings.MaxResults = 15;
         settings.CurrencyCacheTtlHours = 12;
+        settings.StartWithWindows = false;
 
         await service.SaveAsync(settings);
 
@@ -50,5 +51,6 @@ public class SettingsServiceTests : IDisposable
         reloaded.HotkeyKey.Should().Be("K");
         reloaded.MaxResults.Should().Be(15);
         reloaded.CurrencyCacheTtlHours.Should().Be(12);
+        reloaded.StartWithWindows.Should().BeFalse();
     }
 }
