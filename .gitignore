@@ -8,3 +8,6 @@ Releases/
 .vs/
 *.user
 *.suo
+
+# Local Claude settings
+.claude/settings.local.json
