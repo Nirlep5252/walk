@@ -36,27 +36,50 @@ public partial class MainViewModel : ObservableObject
 
     private async Task SearchAsync(string query)
     {
-        _cts?.Cancel();
+        CancelPendingSearch();
         _cts = new CancellationTokenSource();
         var token = _cts.Token;
 
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            Results.Clear();
+            SelectedIndex = -1;
+            return;
+        }
+
         try
         {
-            await Task.Delay(100, token);
+            await Task.Delay(80, token);
         }
         catch (OperationCanceledException)
         {
             return;
         }
 
-        var results = await _router.RouteAsync(query, token);
+        IReadOnlyList<SearchResult> results;
+        try
+        {
+            results = await _router.RouteAsync(query, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
 
         if (token.IsCancellationRequested)
             return;
 
-        Results.Clear();
-        foreach (var result in results.Take(_maxResults))
-            Results.Add(result);
+        // Update collection in-place to minimize UI layout passes
+        var newResults = results.Take(_maxResults).ToList();
+        for (int i = 0; i < newResults.Count; i++)
+        {
+            if (i < Results.Count)
+                Results[i] = newResults[i];
+            else
+                Results.Add(newResults[i]);
+        }
+        while (Results.Count > newResults.Count)
+            Results.RemoveAt(Results.Count - 1);
 
         SelectedIndex = Results.Count > 0 ? 0 : -1;
     }
@@ -88,6 +111,7 @@ public partial class MainViewModel : ObservableObject
 
     public void Show()
     {
+        CancelPendingSearch();
         SearchText = "";
         Results.Clear();
         IsVisible = true;
@@ -95,6 +119,7 @@ public partial class MainViewModel : ObservableObject
 
     public void Hide()
     {
+        CancelPendingSearch();
         IsVisible = false;
     }
 
@@ -102,5 +127,12 @@ public partial class MainViewModel : ObservableObject
     {
         if (IsVisible) Hide();
         else Show();
+    }
+
+    private void CancelPendingSearch()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = null;
     }
 }

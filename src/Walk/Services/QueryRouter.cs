@@ -14,11 +14,18 @@ public sealed class QueryRouter
 
     public async Task<IReadOnlyList<SearchResult>> RouteAsync(string query, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(query))
+        var trimmedQuery = query.Trim();
+        if (trimmedQuery.Length == 0)
             return [];
 
-        var tasks = _plugins.Select(p => SafeQuery(p, query, ct));
-        var results = await Task.WhenAll(tasks);
+        if (ct.IsCancellationRequested)
+            return [];
+
+        var tasks = _plugins.Select(p => SafeQueryAsync(p, trimmedQuery, ct)).ToArray();
+        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+        if (ct.IsCancellationRequested)
+            return [];
 
         return results
             .SelectMany(r => r)
@@ -26,12 +33,12 @@ public sealed class QueryRouter
             .ToList();
     }
 
-    private static async Task<IReadOnlyList<SearchResult>> SafeQuery(
+    private static async Task<IReadOnlyList<SearchResult>> SafeQueryAsync(
         IQueryPlugin plugin, string query, CancellationToken ct)
     {
         try
         {
-            return await plugin.QueryAsync(query, ct);
+            return await Task.Run(() => plugin.QueryAsync(query, ct), ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

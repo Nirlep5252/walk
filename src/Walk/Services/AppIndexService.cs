@@ -12,6 +12,8 @@ public sealed class AppIndexService : IDisposable
     private readonly string _indexPath;
     private List<AppEntry> _entries = [];
     private readonly List<FileSystemWatcher> _watchers = [];
+    private CancellationTokenSource? _rebuildCts;
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
 
     private static readonly string[] StartMenuPaths =
     [
@@ -45,7 +47,8 @@ public sealed class AppIndexService : IDisposable
             }
         }
 
-        // Index PATH executables
+        // Index PATH executables — use HashSet for O(1) dedup
+        var knownNames = new HashSet<string>(entries.Select(e => e.Name), StringComparer.OrdinalIgnoreCase);
         var pathEnv = Environment.GetEnvironmentVariable("PATH") ?? "";
         foreach (var dir in pathEnv.Split(';', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -57,7 +60,7 @@ public sealed class AppIndexService : IDisposable
                 foreach (var exe in Directory.EnumerateFiles(dir, "*.exe"))
                 {
                     var name = Path.GetFileNameWithoutExtension(exe);
-                    if (!entries.Any(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                    if (knownNames.Add(name))
                     {
                         entries.Add(new AppEntry
                         {
@@ -103,14 +106,33 @@ public sealed class AppIndexService : IDisposable
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName,
                 EnableRaisingEvents = true
             };
-            watcher.Created += async (_, _) => await BuildIndexAsync();
-            watcher.Deleted += async (_, _) => await BuildIndexAsync();
+            watcher.Created += (_, _) => ScheduleDebouncedRebuild();
+            watcher.Deleted += (_, _) => ScheduleDebouncedRebuild();
             _watchers.Add(watcher);
         }
     }
 
+    private void ScheduleDebouncedRebuild()
+    {
+        _rebuildCts?.Cancel();
+        _rebuildCts = new CancellationTokenSource();
+        var token = _rebuildCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(2000, token);
+                await BuildIndexAsync();
+            }
+            catch (OperationCanceledException) { }
+        });
+    }
+
     public void Dispose()
     {
+        _rebuildCts?.Cancel();
+        _rebuildCts?.Dispose();
         foreach (var w in _watchers)
             w.Dispose();
     }
@@ -166,11 +188,14 @@ public sealed class AppIndexService : IDisposable
             var json = await File.ReadAllTextAsync(_indexPath);
             var existing = JsonSerializer.Deserialize<List<AppEntry>>(json) ?? [];
 
+            // Use Dictionary for O(1) lookup instead of O(n) FirstOrDefault per entry
+            var existingByPath = new Dictionary<string, AppEntry>(existing.Count, StringComparer.OrdinalIgnoreCase);
+            foreach (var e in existing)
+                existingByPath.TryAdd(e.ExecutablePath, e);
+
             foreach (var newEntry in newEntries)
             {
-                var old = existing.FirstOrDefault(e =>
-                    e.ExecutablePath.Equals(newEntry.ExecutablePath, StringComparison.OrdinalIgnoreCase));
-                if (old is not null)
+                if (existingByPath.TryGetValue(newEntry.ExecutablePath, out var old))
                 {
                     newEntry.LaunchCount = old.LaunchCount;
                     newEntry.LastUsed = old.LastUsed;
@@ -187,7 +212,7 @@ public sealed class AppIndexService : IDisposable
     {
         try
         {
-            var json = JsonSerializer.Serialize(_entries, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(_entries, JsonOptions);
             await File.WriteAllTextAsync(_indexPath, json);
         }
         catch

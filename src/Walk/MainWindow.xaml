@@ -5,9 +5,9 @@
     xmlns:helpers="clr-namespace:Walk.Helpers"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="Walk"
-    Width="740"
-    MinHeight="300"
-    MaxHeight="640"
+    Width="680"
+    MinHeight="56"
+    MaxHeight="580"
     SizeToContent="Height"
     WindowStartupLocation="CenterScreen"
     ShowInTaskbar="False"
@@ -15,109 +15,83 @@
     ResizeMode="NoResize"
     ExtendsContentIntoTitleBar="True"
     WindowBackdropType="Mica"
-    WindowCornerPreference="Round"
-    Background="Transparent"
-    FontFamily="Segoe UI Variable Text">
+    WindowCornerPreference="Round">
 
     <ui:FluentWindow.Resources>
         <helpers:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
         <helpers:ZeroCountToVisibilityConverter x:Key="ZeroCountToVisibilityConverter" />
 
-        <SolidColorBrush x:Key="ShellBackgroundBrush" Color="#EC0F141D" />
-        <SolidColorBrush x:Key="ShellBorderBrush" Color="#527EA6E0" />
-        <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#4A1A2636" />
-        <SolidColorBrush x:Key="PanelBorderBrush" Color="#35FFFFFF" />
-        <SolidColorBrush x:Key="ResultDefaultBrush" Color="#12000000" />
-        <SolidColorBrush x:Key="ResultHoverBrush" Color="#324D8FC9" />
-        <SolidColorBrush x:Key="ResultSelectedBrush" Color="#5666A2DF" />
-        <SolidColorBrush x:Key="ResultBorderBrush" Color="#2DFFFFFF" />
-        <SolidColorBrush x:Key="BadgeBackgroundBrush" Color="#3E1F2E48" />
-        <SolidColorBrush x:Key="BadgeBorderBrush" Color="#628BC1FF" />
-        <SolidColorBrush x:Key="HintTextBrush" Color="#A0C0D7F5" />
+        <!-- Completely naked TextBox: nuke ALL chrome from the ControlTemplate -->
+        <Style x:Key="NakedTextBox" TargetType="TextBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="SelectionBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <ScrollViewer
+                            x:Name="PART_ContentHost"
+                            Focusable="False"
+                            HorizontalScrollBarVisibility="Hidden"
+                            VerticalScrollBarVisibility="Hidden"
+                            Padding="0" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
-        <DropShadowEffect
-            x:Key="ShellShadowEffect"
-            BlurRadius="36"
-            Color="#A7000000"
-            Direction="270"
-            Opacity="0.75"
-            ShadowDepth="10" />
-
+        <!-- Result list item with accent bar on selection -->
         <Style x:Key="ResultItemStyle" TargetType="ListBoxItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="Margin" Value="0" />
             <Setter Property="Padding" Value="0" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border
-                            x:Name="ItemChrome"
-                            CornerRadius="12"
-                            Padding="12,10"
-                            RenderTransformOrigin="0.5,0.5"
-                            BorderThickness="1">
-                            <Border.Background>
-                                <SolidColorBrush x:Name="ItemBg" Color="#12000000" />
-                            </Border.Background>
-                            <Border.BorderBrush>
-                                <SolidColorBrush x:Name="ItemBorder" Color="#2DFFFFFF" />
-                            </Border.BorderBrush>
-                            <Border.RenderTransform>
-                                <ScaleTransform ScaleX="1" ScaleY="1" />
-                            </Border.RenderTransform>
-                            <ContentPresenter />
-                        </Border>
+                        <Grid>
+                            <!-- Accent bar (left edge, hidden by default) -->
+                            <Border
+                                x:Name="AccentBar"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center"
+                                Width="3"
+                                Height="16"
+                                CornerRadius="1.5"
+                                Margin="0,0,0,0"
+                                Opacity="0">
+                                <Border.Background>
+                                    <SolidColorBrush x:Name="AccentBrush" Color="{DynamicResource SystemAccentColorSecondary}" />
+                                </Border.Background>
+                            </Border>
+
+                            <!-- Item content -->
+                            <Border
+                                x:Name="ItemChrome"
+                                CornerRadius="6"
+                                Padding="12,8"
+                                Margin="6,1,4,1">
+                                <Border.Background>
+                                    <SolidColorBrush x:Name="ItemBg" Color="Transparent" />
+                                </Border.Background>
+                                <ContentPresenter />
+                            </Border>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <ColorAnimation
-                                                Storyboard.TargetName="ItemBg"
-                                                Storyboard.TargetProperty="Color"
-                                                To="#324D8FC9"
-                                                Duration="0:0:0.10" />
-                                            <ColorAnimation
-                                                Storyboard.TargetName="ItemBorder"
-                                                Storyboard.TargetProperty="Color"
-                                                To="#64B3D8FF"
-                                                Duration="0:0:0.10" />
-                                            <DoubleAnimation
-                                                Storyboard.TargetName="ItemChrome"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                To="1.01"
-                                                Duration="0:0:0.10" />
-                                            <DoubleAnimation
-                                                Storyboard.TargetName="ItemChrome"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                To="1.01"
-                                                Duration="0:0:0.10" />
+                                            <ColorAnimation Storyboard.TargetName="ItemBg" Storyboard.TargetProperty="Color" To="#0CFFFFFF" Duration="0:0:0.08" />
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <ColorAnimation
-                                                Storyboard.TargetName="ItemBg"
-                                                Storyboard.TargetProperty="Color"
-                                                To="#12000000"
-                                                Duration="0:0:0.10" />
-                                            <ColorAnimation
-                                                Storyboard.TargetName="ItemBorder"
-                                                Storyboard.TargetProperty="Color"
-                                                To="#2DFFFFFF"
-                                                Duration="0:0:0.10" />
-                                            <DoubleAnimation
-                                                Storyboard.TargetName="ItemChrome"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                To="1.0"
-                                                Duration="0:0:0.10" />
-                                            <DoubleAnimation
-                                                Storyboard.TargetName="ItemChrome"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                To="1.0"
-                                                Duration="0:0:0.10" />
+                                            <ColorAnimation Storyboard.TargetName="ItemBg" Storyboard.TargetProperty="Color" To="Transparent" Duration="0:0:0.08" />
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
@@ -126,308 +100,180 @@
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <ColorAnimation
-                                                Storyboard.TargetName="ItemBg"
-                                                Storyboard.TargetProperty="Color"
-                                                To="#5666A2DF"
-                                                Duration="0:0:0.12" />
-                                            <ColorAnimation
-                                                Storyboard.TargetName="ItemBorder"
-                                                Storyboard.TargetProperty="Color"
-                                                To="#88CAE5FF"
-                                                Duration="0:0:0.12" />
+                                            <ColorAnimation Storyboard.TargetName="ItemBg" Storyboard.TargetProperty="Color" To="#0FFFFFFF" Duration="0:0:0.08" />
+                                            <DoubleAnimation Storyboard.TargetName="AccentBar" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12" />
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <ColorAnimation
-                                                Storyboard.TargetName="ItemBg"
-                                                Storyboard.TargetProperty="Color"
-                                                To="#12000000"
-                                                Duration="0:0:0.12" />
-                                            <ColorAnimation
-                                                Storyboard.TargetName="ItemBorder"
-                                                Storyboard.TargetProperty="Color"
-                                                To="#2DFFFFFF"
-                                                Duration="0:0:0.12" />
+                                            <ColorAnimation Storyboard.TargetName="ItemBg" Storyboard.TargetProperty="Color" To="Transparent" Duration="0:0:0.08" />
+                                            <DoubleAnimation Storyboard.TargetName="AccentBar" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.08" />
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="ItemChrome" Property="Opacity" Value="0.6" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Kbd badge for footer hints -->
+        <Style x:Key="KbdBadge" TargetType="Border">
+            <Setter Property="Background" Value="#12FFFFFF" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="5,2,5,3" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="KbdText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="HintLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="4,0,0,0" />
+        </Style>
     </ui:FluentWindow.Resources>
 
-    <Grid x:Name="RootGrid" Margin="14" RenderTransformOrigin="0.5,0.5">
+    <Grid x:Name="RootGrid" RenderTransformOrigin="0.5,0.5">
         <Grid.RenderTransform>
             <ScaleTransform x:Name="RootScaleTransform" ScaleX="1" ScaleY="1" />
         </Grid.RenderTransform>
-        <Border
-            Background="{StaticResource ShellBackgroundBrush}"
-            BorderBrush="{StaticResource ShellBorderBrush}"
-            BorderThickness="1.4"
-            CornerRadius="18"
-            Padding="18,16,18,14"
-            Effect="{StaticResource ShellShadowEffect}">
 
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+        <DockPanel LastChildFill="True">
 
-                <Grid Grid.Row="0" Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border
-                            Width="32"
-                            Height="32"
-                            CornerRadius="8"
-                            Background="#5F4D8FC9"
-                            BorderBrush="#88B2D9FF"
-                            BorderThickness="1"
-                            VerticalAlignment="Center">
-                            <ui:SymbolIcon
-                                Symbol="Rocket24"
-                                FontSize="18"
-                                Foreground="#F0FFFFFF" />
-                        </Border>
-
-                        <StackPanel Margin="10,0,0,0">
-                            <TextBlock
-                                Text="Walk"
-                                FontFamily="Segoe UI Variable Display Semibold"
-                                FontSize="18"
-                                Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                            <TextBlock
-                                Text="Search apps, files, system commands, math, and currency."
-                                FontSize="12"
-                                Foreground="{StaticResource HintTextBrush}" />
+            <!-- Bottom bar: only visible when results exist -->
+            <Border
+                DockPanel.Dock="Bottom"
+                Padding="14,7,14,9"
+                BorderThickness="0,1,0,0"
+                BorderBrush="#0AFFFFFF"
+                Visibility="{Binding Results.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                <Grid>
+                    <!-- Right: keyboard hints -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,12,0">
+                            <Border Style="{StaticResource KbdBadge}">
+                                <TextBlock Text="↵" Style="{StaticResource KbdText}" />
+                            </Border>
+                            <TextBlock Text="Open" Style="{StaticResource HintLabel}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,12,0">
+                            <Border Style="{StaticResource KbdBadge}">
+                                <TextBlock Text="Ctrl ↵" Style="{StaticResource KbdText}" />
+                            </Border>
+                            <TextBlock Text="Admin" Style="{StaticResource HintLabel}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Border Style="{StaticResource KbdBadge}">
+                                <TextBlock Text="Esc" Style="{StaticResource KbdText}" />
+                            </Border>
+                            <TextBlock Text="Close" Style="{StaticResource HintLabel}" />
                         </StackPanel>
                     </StackPanel>
-
-                    <Border
-                        Grid.Column="1"
-                        Padding="10,4"
-                        CornerRadius="10"
-                        Background="{StaticResource BadgeBackgroundBrush}"
-                        BorderBrush="{StaticResource BadgeBorderBrush}"
-                        BorderThickness="1"
-                        VerticalAlignment="Center">
-                        <TextBlock
-                            Text="Ctrl+Alt+Space"
-                            FontSize="11"
-                            FontWeight="SemiBold"
-                            Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                    </Border>
                 </Grid>
+            </Border>
 
-                <Border
-                    Grid.Row="1"
-                    Margin="0,0,0,12"
-                    Padding="2"
-                    CornerRadius="12"
-                    Background="#66161D2A"
-                    BorderBrush="#6FB6D7FF"
-                    BorderThickness="1.2">
-                    <ui:TextBox
-                        x:Name="SearchBox"
-                        PlaceholderText="Type to search, calculate, convert, or run..."
-                        FontFamily="Segoe UI Variable Display"
-                        FontSize="21"
-                        Padding="8,4"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                        Icon="{ui:SymbolIcon Search24}" />
-                </Border>
+            <!-- Main content -->
+            <StackPanel>
 
-                <Grid Grid.Row="2" Margin="2,0,2,8">
+                <!-- Search bar: icon + naked input -->
+                <Grid Margin="8,12,12,10">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock
-                        Text="Top matches"
-                        FontSize="12"
-                        FontWeight="SemiBold"
-                        Foreground="{StaticResource HintTextBrush}" />
+                    <ui:SymbolIcon
+                        Symbol="Search24"
+                        FontSize="22"
+                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                        VerticalAlignment="Center"
+                        Margin="0,0,14,0" />
 
-                    <TextBlock
-                        Grid.Column="1"
-                        Text="{Binding Results.Count, StringFormat={}{0} shown}"
-                        FontSize="11"
-                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <Grid Grid.Column="1" VerticalAlignment="Center">
+                        <!-- Placeholder text -->
+                        <TextBlock
+                            Text="Search for apps, files and commands..."
+                            FontSize="20"
+                            Foreground="{DynamicResource TextFillColorDisabledBrush}"
+                            IsHitTestVisible="False"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding Text.Length, ElementName=SearchBox, Converter={StaticResource ZeroCountToVisibilityConverter}}" />
+
+                        <!-- Naked input (template = just ScrollViewer, zero chrome) -->
+                        <TextBox
+                            x:Name="SearchBox"
+                            Style="{StaticResource NakedTextBox}"
+                            Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
                 </Grid>
 
-                <Border
-                    Grid.Row="3"
-                    CornerRadius="14"
-                    Background="{StaticResource PanelBackgroundBrush}"
-                    BorderBrush="{StaticResource PanelBorderBrush}"
-                    BorderThickness="1"
-                    Padding="12">
+                <!-- Results -->
+                <StackPanel Visibility="{Binding Results.Count, Converter={StaticResource CountToVisibilityConverter}}">
 
-                    <Grid>
-                        <ListBox
-                            x:Name="ResultsList"
-                            ItemsSource="{Binding Results}"
-                            SelectedIndex="{Binding SelectedIndex}"
-                            MaxHeight="420"
-                            BorderThickness="0"
-                            Background="Transparent"
-                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                            ItemContainerStyle="{StaticResource ResultItemStyle}"
-                            Visibility="{Binding Results.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                    <Rectangle Height="1" Fill="#0AFFFFFF" Margin="14,0" />
 
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="36" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
+                    <ListBox
+                        x:Name="ResultsList"
+                        ItemsSource="{Binding Results}"
+                        SelectedIndex="{Binding SelectedIndex}"
+                        MaxHeight="420"
+                        Margin="4,4,4,4"
+                        BorderThickness="0"
+                        Background="Transparent"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        ItemContainerStyle="{StaticResource ResultItemStyle}"
+                        FocusVisualStyle="{x:Null}">
 
-                                        <Border
-                                            Grid.Column="0"
-                                            Width="34"
-                                            Height="34"
-                                            CornerRadius="9"
-                                            Background="#341E2D44"
-                                            BorderBrush="#4A8DB9EA"
-                                            BorderThickness="1"
-                                            VerticalAlignment="Center">
-                                            <Image
-                                                Source="{Binding Icon}"
-                                                Width="20"
-                                                Height="20"
-                                                VerticalAlignment="Center"
-                                                HorizontalAlignment="Center"
-                                                RenderOptions.BitmapScalingMode="HighQuality" />
-                                        </Border>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
 
-                                        <StackPanel Grid.Column="1" Margin="10,0,10,0" VerticalAlignment="Center">
-                                            <TextBlock
-                                                Text="{Binding Title}"
-                                                FontSize="14"
-                                                FontWeight="SemiBold"
-                                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                TextTrimming="CharacterEllipsis" />
-                                            <TextBlock
-                                                Text="{Binding Subtitle}"
-                                                FontSize="11"
-                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                TextTrimming="CharacterEllipsis" />
-                                        </StackPanel>
+                                    <Image
+                                        Grid.Column="0"
+                                        Source="{Binding Icon}"
+                                        Width="32" Height="32"
+                                        VerticalAlignment="Center"
+                                        RenderOptions.BitmapScalingMode="HighQuality" />
 
-                                        <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                            <Border
-                                                Padding="8,2"
-                                                CornerRadius="9"
-                                                Background="{StaticResource BadgeBackgroundBrush}"
-                                                BorderBrush="{StaticResource BadgeBorderBrush}"
-                                                BorderThickness="1"
-                                                HorizontalAlignment="Right">
-                                                <TextBlock
-                                                    Text="{Binding PluginName}"
-                                                    FontSize="10"
-                                                    FontWeight="SemiBold"
-                                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                            </Border>
-                                            <TextBlock
-                                                Margin="0,4,0,0"
-                                                Text="{Binding Actions[0].KeyGesture}"
-                                                FontSize="10"
-                                                HorizontalAlignment="Right"
-                                                Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                                        </StackPanel>
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                                    <StackPanel Grid.Column="1" Margin="14,0,8,0" VerticalAlignment="Center">
+                                        <TextBlock
+                                            Text="{Binding Title}"
+                                            FontSize="13"
+                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                            TextTrimming="CharacterEllipsis" />
+                                        <TextBlock
+                                            Text="{Binding Subtitle}"
+                                            FontSize="11.5"
+                                            Margin="0,1,0,0"
+                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                            TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
 
-                        <StackPanel
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Visibility="{Binding Results.Count, Converter={StaticResource ZeroCountToVisibilityConverter}}">
-                            <ui:SymbolIcon
-                                Symbol="Search24"
-                                FontSize="36"
-                                Foreground="{StaticResource HintTextBrush}"
-                                HorizontalAlignment="Center"
-                                Margin="0,0,0,8">
-                                <ui:SymbolIcon.Triggers>
-                                    <EventTrigger RoutedEvent="Loaded">
-                                        <BeginStoryboard>
-                                            <Storyboard>
-                                                <DoubleAnimation
-                                                    Storyboard.TargetProperty="Opacity"
-                                                    From="0.5"
-                                                    To="0.9"
-                                                    Duration="0:0:2"
-                                                    AutoReverse="True"
-                                                    RepeatBehavior="Forever" />
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </EventTrigger>
-                                </ui:SymbolIcon.Triggers>
-                            </ui:SymbolIcon>
-                            <TextBlock
-                                Text="Start typing to launch something"
-                                FontSize="17"
-                                FontFamily="Segoe UI Variable Display Semibold"
-                                HorizontalAlignment="Center"
-                                Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                            <TextBlock
-                                Margin="0,6,0,0"
-                                FontSize="12"
-                                HorizontalAlignment="Center"
-                                Foreground="{StaticResource HintTextBrush}">
-                                <TextBlock.Text>Try: edge, calc 42*19, usd to eur, file readme</TextBlock.Text>
-                                <TextBlock.Triggers>
-                                    <EventTrigger RoutedEvent="Loaded">
-                                        <BeginStoryboard>
-                                            <Storyboard>
-                                                <DoubleAnimation
-                                                    Storyboard.TargetProperty="Opacity"
-                                                    From="0.6"
-                                                    To="1.0"
-                                                    Duration="0:0:2"
-                                                    AutoReverse="True"
-                                                    RepeatBehavior="Forever" />
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </EventTrigger>
-                                </TextBlock.Triggers>
-                            </TextBlock>
-                        </StackPanel>
-                    </Grid>
-                </Border>
+                                    <TextBlock
+                                        Grid.Column="2"
+                                        VerticalAlignment="Center"
+                                        Text="{Binding PluginName}"
+                                        FontSize="10"
+                                        Foreground="{DynamicResource TextFillColorDisabledBrush}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
 
-                <TextBlock
-                    Grid.Row="4"
-                    Margin="2,10,2,0"
-                    Text="Enter: Run   |   Ctrl+Enter: Run as admin   |   Esc: Hide"
-                    FontSize="11"
-                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-            </Grid>
-        </Border>
+            </StackPanel>
+        </DockPanel>
     </Grid>
 </ui:FluentWindow>

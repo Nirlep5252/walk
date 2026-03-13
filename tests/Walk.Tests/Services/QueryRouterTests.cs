@@ -90,4 +90,26 @@ public class QueryRouterTests
 
         results.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task RouteAsync_Does_Not_Block_Caller_For_Synchronous_Plugins()
+    {
+        var blockingPlugin = Substitute.For<IQueryPlugin>();
+        blockingPlugin.Name.Returns("Blocking");
+        blockingPlugin.Priority.Returns(1);
+        blockingPlugin.QueryAsync("test", Arg.Any<CancellationToken>())
+            .Returns<IReadOnlyList<SearchResult>>(_ =>
+            {
+                Thread.Sleep(200);
+                return [];
+            });
+
+        var router = new QueryRouter([blockingPlugin]);
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        var routeTask = router.RouteAsync("test", CancellationToken.None);
+
+        stopwatch.ElapsedMilliseconds.Should().BeLessThan(100);
+        await routeTask;
+    }
 }

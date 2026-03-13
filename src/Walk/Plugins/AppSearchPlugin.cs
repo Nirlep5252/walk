@@ -1,3 +1,4 @@
+using System.Windows.Threading;
 using Walk.Helpers;
 using Walk.Models;
 using Walk.Services;
@@ -21,7 +22,7 @@ public sealed class AppSearchPlugin : IQueryPlugin
         if (string.IsNullOrWhiteSpace(query))
             return Task.FromResult<IReadOnlyList<SearchResult>>([]);
 
-        var results = new List<SearchResult>();
+        var matches = new List<(AppEntry Entry, double Score)>();
 
         foreach (var entry in _indexService.Entries)
         {
@@ -34,13 +35,23 @@ public sealed class AppSearchPlugin : IQueryPlugin
             var usageBoost = Math.Min(0.1, entry.LaunchCount * 0.005);
             var finalScore = match.Score + usageBoost;
 
-            results.Add(new SearchResult
+            matches.Add((entry, finalScore));
+        }
+
+        var topMatches = matches
+            .OrderByDescending(static match => match.Score)
+            .Take(10)
+            .ToList();
+
+        var results = new List<SearchResult>(topMatches.Count);
+        foreach (var (entry, score) in topMatches)
+        {
+            var result = new SearchResult
             {
                 Title = entry.Name,
                 Subtitle = entry.ExecutablePath,
-                Icon = IconExtractor.GetIcon(entry.ExecutablePath),
                 PluginName = Name,
-                Score = finalScore,
+                Score = score,
                 Actions =
                 [
                     new SearchAction
@@ -70,10 +81,52 @@ public sealed class AppSearchPlugin : IQueryPlugin
                         KeyGesture = "Ctrl+O"
                     },
                 ]
-            });
+            };
+
+            if (IconExtractor.TryGetCachedIcon(entry.ExecutablePath, out var cachedIcon))
+            {
+                result.Icon = cachedIcon;
+            }
+            else
+            {
+                _ = PopulateIconAsync(result, entry.ExecutablePath, ct);
+            }
+
+            results.Add(result);
         }
 
-        IReadOnlyList<SearchResult> sorted = results.OrderByDescending(r => r.Score).Take(10).ToList();
-        return Task.FromResult(sorted);
+        return Task.FromResult<IReadOnlyList<SearchResult>>(results);
+    }
+
+    private static async Task PopulateIconAsync(SearchResult result, string executablePath, CancellationToken ct)
+    {
+        try
+        {
+            var icon = await IconExtractor.GetIconAsync(executablePath, ct).ConfigureAwait(false);
+            if (icon is null || ct.IsCancellationRequested)
+                return;
+
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher is null)
+            {
+                result.Icon = icon;
+                return;
+            }
+
+            await dispatcher.InvokeAsync(
+                () =>
+                {
+                    if (!ct.IsCancellationRequested)
+                        result.Icon = icon;
+                },
+                DispatcherPriority.Background,
+                ct);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+        }
     }
 }

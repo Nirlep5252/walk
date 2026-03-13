@@ -42,4 +42,18 @@ public class SearchResultTests
 
         result.Icon.Should().BeNull();
     }
+
+    [Fact]
+    public void SearchResult_Icon_Can_Be_Updated_After_Creation()
+    {
+        var result = new SearchResult
+        {
+            Title = "Test",
+            Actions = []
+        };
+
+        result.Icon = null;
+
+        result.Icon.Should().BeNull();
+    }
 }
