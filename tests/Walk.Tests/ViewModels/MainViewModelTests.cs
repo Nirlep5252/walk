@@ -114,9 +114,23 @@ public class MainViewModelTests
         var viewModel = new MainViewModel(new QueryRouter([plugin]));
 
         viewModel.SearchText = "bulk";
-        await Task.Delay(150);
+        await WaitForAsync(
+            () => viewModel.Results.Count == 12,
+            TimeSpan.FromSeconds(2));
 
         viewModel.Results.Should().HaveCount(12);
+    }
+
+    private static async Task WaitForAsync(Func<bool> condition, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (condition())
+                return;
+
+            await Task.Delay(25);
+        }
     }
 
     private sealed class ThrowingPlugin : IQueryPlugin
