@@ -52,11 +52,13 @@ public sealed class AppSearchPlugin : IQueryPlugin
                 Subtitle = entry.ExecutablePath,
                 PluginName = Name,
                 Score = score,
+                IconGlyph = "\u25B6",
                 Actions =
                 [
                     new SearchAction
                     {
                         Label = "Run",
+                        HintLabel = "Run",
                         Execute = () =>
                         {
                             ProcessHelper.Launch(entry.ExecutablePath, asAdmin: false, entry.Arguments, entry.WorkingDirectory);
@@ -67,6 +69,7 @@ public sealed class AppSearchPlugin : IQueryPlugin
                     new SearchAction
                     {
                         Label = "Run as Administrator",
+                        HintLabel = "Admin",
                         Execute = () =>
                         {
                             ProcessHelper.Launch(entry.ExecutablePath, asAdmin: true, entry.Arguments, entry.WorkingDirectory);
@@ -77,6 +80,7 @@ public sealed class AppSearchPlugin : IQueryPlugin
                     new SearchAction
                     {
                         Label = "Open File Location",
+                        HintLabel = "Reveal",
                         Execute = () => ProcessHelper.OpenFileLocation(entry.ExecutablePath),
                         KeyGesture = "Ctrl+O"
                     },

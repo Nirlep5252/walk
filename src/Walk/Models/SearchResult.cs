@@ -10,6 +10,7 @@ public sealed class SearchResult : ObservableObject
     public string PluginName { get; init; } = "";
     public double Score { get; init; }
     public required IReadOnlyList<SearchAction> Actions { get; init; }
+    public string? IconGlyph { get; init; }
 
     private ImageSource? _icon;
 
@@ -17,5 +18,22 @@ public sealed class SearchResult : ObservableObject
     {
         get => _icon;
         set => SetProperty(ref _icon, value);
+    }
+
+    public string DisplayIconGlyph => string.IsNullOrWhiteSpace(IconGlyph)
+        ? GetDefaultIconGlyph()
+        : IconGlyph!;
+
+    private string GetDefaultIconGlyph()
+    {
+        return PluginName switch
+        {
+            "Calculator" => "=",
+            "Currency" => "$",
+            "Files" => "\uD83D\uDCC4",
+            "Run" => "\u25B6",
+            "System" => "\u23FB",
+            _ => PluginName.Length > 0 ? PluginName[..1].ToUpperInvariant() : "?",
+        };
     }
 }

@@ -35,4 +35,12 @@ public class SettingsViewModelTests
 
         settings.StartWithWindows.Should().BeFalse();
     }
+
+    [Fact]
+    public void DisplayVersion_Shows_Dev_Mode_Label()
+    {
+        var viewModel = new SettingsViewModel(new WalkSettings(), AppVersionService.DevelopmentModeVersion);
+
+        viewModel.DisplayVersion.Should().Be(AppVersionService.DevelopmentModeLabel);
+    }
 }

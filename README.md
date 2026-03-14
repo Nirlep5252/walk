@@ -8,6 +8,7 @@ It sits in the system tray and opens a small search box so you can do common act
 - calculate expressions like `2+2`
 - convert currencies like `100 USD to EUR`
 - run system commands like `lock`
+- launch Windows Run targets like `services.msc`, `shell:startup`, or `ms-settings:display`
 - browse files by typing a path like `C:\Windows`
 
 ## What It Feels Like
@@ -25,6 +26,8 @@ Current features include:
 - app search from Start Menu shortcuts and executables on `PATH`
 - calculator results inline in the launcher
 - cached currency conversion
+- Windows Run commands, settings URIs, and shell folders
+- recent Run command recall
 - file path browsing
 - tray icon and auto-start support
 - installed-build auto-update support

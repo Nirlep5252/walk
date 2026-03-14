@@ -71,11 +71,13 @@ public sealed partial class CurrencyPlugin : IQueryPlugin
                     Subtitle = $"Rate: 1 {from} = {rate:N6} {to}",
                     PluginName = Name,
                     Score = 0.95,
+                    IconGlyph = "$",
                     Actions =
                     [
                         new SearchAction
                         {
                             Label = "Copy Result",
+                            HintLabel = "Copy",
                             Execute = () => System.Windows.Clipboard.SetText(formatted),
                             KeyGesture = "Enter"
                         },

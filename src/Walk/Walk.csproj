@@ -9,8 +9,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Assets\walk-app.ico</ApplicationIcon>
     <StartupObject>Walk.Program</StartupObject>
-    <Version>0.2.1</Version>
-    <FileVersion>0.2.1.0</FileVersion>
+    <Version>0.3.0</Version>
+    <FileVersion>0.3.0.0</FileVersion>
     <InformationalVersion>$(Version)</InformationalVersion>
   </PropertyGroup>
 
@@ -24,6 +24,14 @@
   <ItemGroup>
     <Resource Include="Assets\walk-tray.ico" />
     <Resource Include="Assets\walk-tray-active.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="artifacts\**\*.cs" />
+    <EmbeddedResource Remove="artifacts\**\*" />
+    <None Remove="artifacts\**\*" />
+    <Page Remove="artifacts\**\*.xaml" />
+    <Resource Remove="artifacts\**\*" />
   </ItemGroup>
 
 </Project>

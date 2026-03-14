@@ -8,6 +8,7 @@ public sealed class UpdateService : IDisposable
     private static readonly TimeSpan InitialCheckDelay = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan PeriodicCheckInterval = TimeSpan.FromHours(6);
 
+    private readonly bool _isDevelopmentBuild;
     private readonly UpdateManager? _updateManager;
     private readonly CancellationTokenSource _shutdown = new();
     private readonly SemaphoreSlim _updateLock = new(1, 1);
@@ -15,6 +16,7 @@ public sealed class UpdateService : IDisposable
 
     public UpdateService()
     {
+        _isDevelopmentBuild = AppVersionService.IsDevelopmentBuild(AppContext.BaseDirectory);
         Version = AppVersionService.GetDisplayVersion();
         StatusText = BuildStatusText();
 
@@ -23,7 +25,7 @@ public sealed class UpdateService : IDisposable
             _updateManager = new UpdateManager(
                 new GithubSource(ReleaseInfo.RepositoryUrl, string.Empty, prerelease: false, downloader: null));
 
-            if (_updateManager.CurrentVersion is not null)
+            if (!_isDevelopmentBuild && _updateManager.CurrentVersion is not null)
             {
                 Version = _updateManager.CurrentVersion.ToString();
                 StatusText = BuildStatusText();
@@ -41,7 +43,7 @@ public sealed class UpdateService : IDisposable
 
     public string StatusText { get; private set; }
 
-    public bool CanCheckForUpdates => _updateManager?.IsInstalled == true;
+    public bool CanCheckForUpdates => !_isDevelopmentBuild && _updateManager?.IsInstalled == true;
 
     public void Start()
     {
@@ -132,9 +134,10 @@ public sealed class UpdateService : IDisposable
 
     private string BuildStatusText(string? detail = null)
     {
+        var versionBadge = AppVersionService.FormatVersionBadge(Version);
         return string.IsNullOrWhiteSpace(detail)
-            ? $"v{Version}"
-            : $"v{Version} - {detail}";
+            ? versionBadge
+            : $"{versionBadge} - {detail}";
     }
 
     private void PublishStatus(string? detail)

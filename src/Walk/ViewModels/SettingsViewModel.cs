@@ -47,7 +47,7 @@ public partial class SettingsViewModel : ObservableObject
     public SettingsViewModel(WalkSettings settings, string displayVersion)
     {
         _settings = settings.Clone();
-        DisplayVersion = $"Version {displayVersion}";
+        DisplayVersion = AppVersionService.FormatSettingsLabel(displayVersion);
         _hotkeyModifiers = HotkeyService.CoerceModifiers(_settings.HotkeyModifiers);
         _hotkeyKey = HotkeyService.CoerceKey(_settings.HotkeyKey);
         _autoStartOnLogin = _settings.StartWithWindows;

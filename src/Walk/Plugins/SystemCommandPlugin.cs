@@ -49,11 +49,13 @@ public sealed class SystemCommandPlugin : IQueryPlugin
                 Subtitle = description,
                 PluginName = Name,
                 Score = match.Score * 0.85,
+                IconGlyph = "\u23FB",
                 Actions =
                 [
                     new SearchAction
                     {
                         Label = needsConfirmation ? "Execute (requires confirmation)" : "Execute",
+                        HintLabel = "Run",
                         Execute = execute,
                         KeyGesture = "Enter"
                     }

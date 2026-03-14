@@ -22,20 +22,17 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     protected override void OnPreviewKeyDown(System.Windows.Input.KeyEventArgs e)
     {
+        var gesture = GetGestureText(e);
+        if (gesture is not null && _viewModel.TryExecuteSelectedAction(gesture))
+        {
+            e.Handled = true;
+            return;
+        }
+
         switch (e.Key)
         {
             case Key.Escape:
                 _viewModel.Hide();
-                e.Handled = true;
-                break;
-
-            case Key.Enter when Keyboard.Modifiers == ModifierKeys.Control:
-                _viewModel.ExecuteAsAdminCommand.Execute(null);
-                e.Handled = true;
-                break;
-
-            case Key.Enter:
-                _viewModel.ExecuteSelectedCommand.Execute(null);
                 e.Handled = true;
                 break;
 
@@ -53,6 +50,30 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         }
 
         base.OnPreviewKeyDown(e);
+    }
+
+    private static string? GetGestureText(System.Windows.Input.KeyEventArgs e)
+    {
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt)
+            return null;
+
+        var modifiers = Keyboard.Modifiers;
+
+        if (key == Key.Enter)
+        {
+            return modifiers switch
+            {
+                ModifierKeys.None => "Enter",
+                ModifierKeys.Control => "Ctrl+Enter",
+                _ => null,
+            };
+        }
+
+        if (modifiers == ModifierKeys.Control && key is >= Key.A and <= Key.Z)
+            return $"Ctrl+{key.ToString().ToUpperInvariant()}";
+
+        return null;
     }
 
     public void ShowLauncher()

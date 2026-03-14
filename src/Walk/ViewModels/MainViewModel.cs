@@ -22,11 +22,22 @@ public partial class MainViewModel : ObservableObject
     private bool _isVisible;
 
     public ObservableCollection<SearchResult> Results { get; } = [];
+    public ObservableCollection<SearchAction> VisibleActions { get; } = [];
 
-    public MainViewModel(QueryRouter router, int maxResults = 8)
+    public SearchResult? SelectedResult =>
+        SelectedIndex >= 0 && SelectedIndex < Results.Count
+            ? Results[SelectedIndex]
+            : null;
+
+    public MainViewModel(QueryRouter router, int maxResults = 0)
     {
         _router = router;
         _maxResults = maxResults;
+    }
+
+    partial void OnSelectedIndexChanged(int value)
+    {
+        RefreshSelectionState();
     }
 
     partial void OnSearchTextChanged(string value)
@@ -44,6 +55,7 @@ public partial class MainViewModel : ObservableObject
         {
             Results.Clear();
             SelectedIndex = -1;
+            RefreshSelectionState();
             return;
         }
 
@@ -70,7 +82,9 @@ public partial class MainViewModel : ObservableObject
             return;
 
         // Update collection in-place to minimize UI layout passes
-        var newResults = results.Take(_maxResults).ToList();
+        var newResults = _maxResults > 0
+            ? results.Take(_maxResults).ToList()
+            : results.ToList();
         for (int i = 0; i < newResults.Count; i++)
         {
             if (i < Results.Count)
@@ -82,31 +96,19 @@ public partial class MainViewModel : ObservableObject
             Results.RemoveAt(Results.Count - 1);
 
         SelectedIndex = Results.Count > 0 ? 0 : -1;
+        RefreshSelectionState();
     }
 
     [RelayCommand]
     private void ExecuteSelected()
     {
-        if (SelectedIndex >= 0 && SelectedIndex < Results.Count)
-        {
-            var result = Results[SelectedIndex];
-            if (result.Actions.Count > 0)
-                result.Actions[0].Execute();
-
-            Hide();
-        }
+        TryExecuteSelectedAction(static action => true);
     }
 
     [RelayCommand]
     private void ExecuteAsAdmin()
     {
-        if (SelectedIndex >= 0 && SelectedIndex < Results.Count)
-        {
-            var result = Results[SelectedIndex];
-            var adminAction = result.Actions.FirstOrDefault(a => a.Label.Contains("Admin"));
-            adminAction?.Execute();
-            Hide();
-        }
+        TryExecuteSelectedAction(action => action.Label.Contains("Admin", StringComparison.OrdinalIgnoreCase));
     }
 
     public void Show()
@@ -114,6 +116,8 @@ public partial class MainViewModel : ObservableObject
         CancelPendingSearch();
         SearchText = "";
         Results.Clear();
+        SelectedIndex = -1;
+        RefreshSelectionState();
         IsVisible = true;
     }
 
@@ -134,5 +138,60 @@ public partial class MainViewModel : ObservableObject
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;
+    }
+
+    public bool TryExecuteSelectedAction(string keyGesture)
+    {
+        if (string.IsNullOrWhiteSpace(keyGesture))
+            return false;
+
+        return TryExecuteSelectedAction(action =>
+            string.Equals(action.KeyGesture, keyGesture, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool TryExecuteSelectedAction(Func<SearchAction, bool> predicate)
+    {
+        var action = SelectedResult?.Actions.FirstOrDefault(predicate);
+        if (action is null)
+            return false;
+
+        var executed = TryExecuteAction(action);
+        if (executed && action.ClosesLauncher)
+            Hide();
+
+        return true;
+    }
+
+    private void RefreshSelectionState()
+    {
+        OnPropertyChanged(nameof(SelectedResult));
+
+        var actions = SelectedResult?.Actions
+            .Where(action => !string.IsNullOrWhiteSpace(action.KeyGesture))
+            .ToList() ?? [];
+
+        for (int i = 0; i < actions.Count; i++)
+        {
+            if (i < VisibleActions.Count)
+                VisibleActions[i] = actions[i];
+            else
+                VisibleActions.Add(actions[i]);
+        }
+
+        while (VisibleActions.Count > actions.Count)
+            VisibleActions.RemoveAt(VisibleActions.Count - 1);
+    }
+
+    private static bool TryExecuteAction(SearchAction action)
+    {
+        try
+        {
+            action.Execute();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

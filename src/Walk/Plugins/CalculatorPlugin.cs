@@ -39,6 +39,7 @@ public sealed partial class CalculatorPlugin : IQueryPlugin
             var copyAction = new SearchAction
             {
                 Label = "Copy to Clipboard",
+                HintLabel = "Copy",
                 Execute = () => System.Windows.Clipboard.SetText(formatted),
                 KeyGesture = "Enter"
             };
@@ -51,6 +52,7 @@ public sealed partial class CalculatorPlugin : IQueryPlugin
                     Subtitle = trimmed,
                     PluginName = Name,
                     Score = 0.95,
+                    IconGlyph = "=",
                     Actions = [copyAction]
                 }
             ];

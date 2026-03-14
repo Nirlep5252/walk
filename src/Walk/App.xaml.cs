@@ -21,6 +21,7 @@ public partial class App : System.Windows.Application
     private AppIndexService? _indexService;
     private UpdateService? _updateService;
     private SettingsService? _settingsService;
+    private RunHistoryService? _runHistoryService;
     private WalkSettings _settings = new();
     private SettingsWindow? _settingsWindow;
     private SettingsViewModel? _settingsViewModel;
@@ -41,6 +42,7 @@ public partial class App : System.Windows.Application
         var cacheService = new CacheService(dataDir);
         _indexService = new AppIndexService(dataDir);
         _updateService = new UpdateService();
+        _runHistoryService = new RunHistoryService(dataDir);
         await _indexService.BuildIndexAsync();
         _indexService.StartWatching();
 
@@ -50,12 +52,13 @@ public partial class App : System.Windows.Application
             new CalculatorPlugin(),
             new CurrencyPlugin(cacheService, TimeSpan.FromHours(_settings.CurrencyCacheTtlHours)),
             new SystemCommandPlugin(),
+            new RunPlugin(_runHistoryService),
             new FileSearchPlugin(),
             new AppSearchPlugin(_indexService),
         };
 
         var router = new QueryRouter(plugins);
-        var viewModel = new MainViewModel(router, _settings.MaxResults);
+        var viewModel = new MainViewModel(router);
 
         // Main window
         _mainWindow = new MainWindow(viewModel);
@@ -194,7 +197,7 @@ public partial class App : System.Windows.Application
 
     private static string BuildTrayTooltip(string version)
     {
-        var tooltip = $"Walk v{version}";
+        var tooltip = $"Walk {AppVersionService.FormatVersionBadge(version)}";
         return tooltip.Length <= 63 ? tooltip : tooltip[..63];
     }
 
