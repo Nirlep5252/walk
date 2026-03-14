@@ -98,7 +98,7 @@ public sealed partial class FileSearchPlugin : IQueryPlugin
 
         if (!isDirectory)
         {
-            if (IconExtractor.TryGetCachedIcon(entry, out var cachedIcon))
+            if (IconExtractor.TryGetCachedIcon(entry, 0, out var cachedIcon))
             {
                 result.Icon = cachedIcon;
             }
@@ -255,7 +255,7 @@ public sealed partial class FileSearchPlugin : IQueryPlugin
     {
         try
         {
-            var icon = await IconExtractor.GetIconAsync(path, ct).ConfigureAwait(false);
+            var icon = await IconExtractor.GetIconAsync(path, 0, ct).ConfigureAwait(false);
             if (icon is null || ct.IsCancellationRequested)
                 return;
 

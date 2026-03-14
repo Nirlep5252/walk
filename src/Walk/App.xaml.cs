@@ -11,6 +11,7 @@ namespace Walk;
 
 public partial class App : System.Windows.Application
 {
+    private SingleInstanceManager? _singleInstanceManager;
     private MainWindow? _mainWindow;
     private HotkeyService? _hotkeyService;
     private Forms.NotifyIcon? _trayIcon;
@@ -26,9 +27,19 @@ public partial class App : System.Windows.Application
     private SettingsWindow? _settingsWindow;
     private SettingsViewModel? _settingsViewModel;
 
+    public App()
+    {
+    }
+
+    public App(SingleInstanceManager singleInstanceManager)
+    {
+        _singleInstanceManager = singleInstanceManager;
+    }
+
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        _singleInstanceManager ??= new SingleInstanceManager("Walk");
 
         var dataDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Walk");
@@ -123,6 +134,10 @@ public partial class App : System.Windows.Application
                 viewModel.Toggle();
             });
         };
+        _singleInstanceManager.StartListening(() =>
+        {
+            Current.Dispatcher.Invoke(() => viewModel.Show());
+        });
 
         // Watch system theme
         Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
@@ -312,6 +327,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _singleInstanceManager?.Dispose();
         _hotkeyService?.Dispose();
         _indexService?.Dispose();
         _updateService?.Dispose();
