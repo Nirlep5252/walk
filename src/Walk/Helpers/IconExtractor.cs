@@ -11,10 +11,7 @@ namespace Walk.Helpers;
 
 public static class IconExtractor
 {
-    private const uint ShgfiIcon = 0x000000100;
-    private const uint ShgfiLargeIcon = 0x000000000;
-    private const uint ShgfiSmallIcon = 0x000000001;
-    private const uint ShgfiPidl = 0x000000008;
+    private const int ShellIconSize = 64;
 
     private static readonly ConcurrentDictionary<string, ImageSource?> Cache = new(StringComparer.OrdinalIgnoreCase);
 
@@ -82,21 +79,46 @@ public static class IconExtractor
 
     private static ImageSource? ExtractShellIconImage(string shellPath)
     {
-        var pidl = IntPtr.Zero;
-
         try
         {
-            var parseResult = SHParseDisplayName(shellPath, IntPtr.Zero, out pidl, 0, out _);
-            if (parseResult != 0 || pidl == IntPtr.Zero)
+            var factory = CreateShellItemImageFactory(shellPath);
+            if (factory is null)
                 return null;
 
-            return TryCreateShellIconFromPidl(pidl, ShgfiLargeIcon) ??
-                   TryCreateShellIconFromPidl(pidl, ShgfiSmallIcon);
+            try
+            {
+                factory.GetImage(
+                    new NativeSize { Width = ShellIconSize, Height = ShellIconSize },
+                    ShellItemImageFlags.BiggerSizeOk | ShellItemImageFlags.IconOnly,
+                    out var bitmapHandle);
+
+                if (bitmapHandle == IntPtr.Zero)
+                    return null;
+
+                try
+                {
+                    var source = Imaging.CreateBitmapSourceFromHBitmap(
+                        bitmapHandle,
+                        IntPtr.Zero,
+                        Int32Rect.Empty,
+                        BitmapSizeOptions.FromWidthAndHeight(ShellIconSize, ShellIconSize));
+                    source.Freeze();
+                    return source;
+                }
+                finally
+                {
+                    DeleteObject(bitmapHandle);
+                }
+            }
+            finally
+            {
+                if (Marshal.IsComObject(factory))
+                    Marshal.ReleaseComObject(factory);
+            }
         }
-        finally
+        catch
         {
-            if (pidl != IntPtr.Zero)
-                CoTaskMemFree(pidl);
+            return null;
         }
     }
 
@@ -157,31 +179,11 @@ public static class IconExtractor
         }
     }
 
-    private static ImageSource? TryCreateShellIconFromPidl(IntPtr pidl, uint sizeFlag)
+    private static IShellItemImageFactory? CreateShellItemImageFactory(string shellPath)
     {
-        var result = SHGetFileInfo(
-            pidl,
-            0,
-            out var shellFileInfo,
-            (uint)Marshal.SizeOf<SHFILEINFO>(),
-            ShgfiPidl | ShgfiIcon | sizeFlag);
-
-        if (result == IntPtr.Zero || shellFileInfo.hIcon == IntPtr.Zero)
-            return null;
-
-        try
-        {
-            var source = Imaging.CreateBitmapSourceFromHIcon(
-                shellFileInfo.hIcon,
-                Int32Rect.Empty,
-                BitmapSizeOptions.FromEmptyOptions());
-            source.Freeze();
-            return source;
-        }
-        finally
-        {
-            DestroyIcon(shellFileInfo.hIcon);
-        }
+        var interfaceId = typeof(IShellItemImageFactory).GUID;
+        SHCreateItemFromParsingName(shellPath, IntPtr.Zero, in interfaceId, out IShellItemImageFactory? factory);
+        return factory;
     }
 
     private static void DestroyHandleIfNeeded(IntPtr handle)
@@ -200,18 +202,30 @@ public static class IconExtractor
         return $"{filePath}|{iconIndex}";
     }
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct SHFILEINFO
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeSize
     {
-        public IntPtr hIcon;
-        public int iIcon;
-        public uint dwAttributes;
+        public int Width;
+        public int Height;
+    }
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
-        public string szDisplayName;
+    [Flags]
+    private enum ShellItemImageFlags
+    {
+        ResizeToFit = 0x0,
+        BiggerSizeOk = 0x1,
+        MemoryOnly = 0x2,
+        IconOnly = 0x4,
+        ThumbnailOnly = 0x8,
+        InCacheOnly = 0x10,
+    }
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
-        public string szTypeName;
+    [ComImport]
+    [Guid("bcc18b79-ba16-442f-80c4-8a59c30c463b")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IShellItemImageFactory
+    {
+        void GetImage(NativeSize size, ShellItemImageFlags flags, out IntPtr phbm);
     }
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
@@ -226,22 +240,14 @@ public static class IconExtractor
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool DestroyIcon(IntPtr hIcon);
 
-    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-    private static extern int SHParseDisplayName(
-        string name,
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeleteObject(IntPtr hObject);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
+    private static extern void SHCreateItemFromParsingName(
+        string path,
         IntPtr pbc,
-        out IntPtr ppidl,
-        uint sfgaoIn,
-        out uint psfgaoOut);
-
-    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-    private static extern IntPtr SHGetFileInfo(
-        IntPtr pszPath,
-        uint dwFileAttributes,
-        out SHFILEINFO psfi,
-        uint cbFileInfo,
-        uint uFlags);
-
-    [DllImport("ole32.dll")]
-    private static extern void CoTaskMemFree(IntPtr pv);
+        in Guid riid,
+        [MarshalAs(UnmanagedType.Interface)] out IShellItemImageFactory? shellItemImageFactory);
 }

@@ -54,9 +54,6 @@ public sealed class AppIndexService : IAppIndexService, IDisposable
         var entriesByIdentity = new Dictionary<string, IndexedEntry>(StringComparer.OrdinalIgnoreCase);
 
         await IndexStartAppEntriesAsync(entriesByIdentity);
-        IndexShortcutEntries(entriesByIdentity);
-        IndexAppPathEntries(entriesByIdentity);
-        IndexPathEntries(entriesByIdentity);
 
         var entries = entriesByIdentity.Values
             .Select(static indexedEntry => indexedEntry.Entry)

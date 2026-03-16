@@ -12,4 +12,12 @@ public class IconExtractorTests
             .Should()
             .BeTrue();
     }
+
+    [Fact]
+    public void GetIcon_Returns_Image_For_AppsFolder_Path()
+    {
+        var icon = IconExtractor.GetIcon(@"shell:AppsFolder\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App");
+
+        icon.Should().NotBeNull();
+    }
 }

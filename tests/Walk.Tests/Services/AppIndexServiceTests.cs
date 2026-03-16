@@ -21,44 +21,6 @@ public class AppIndexServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildIndexAsync_Indexes_CustomProtocolUrlShortcuts()
-    {
-        var shortcutDir = Path.Combine(_testDir, "shortcuts");
-        Directory.CreateDirectory(shortcutDir);
-
-        var iconPath = Path.Combine(_testDir, "deadlock.ico");
-        await File.WriteAllBytesAsync(iconPath, [0x00]);
-
-        var shortcutPath = Path.Combine(shortcutDir, "Deadlock.url");
-        await File.WriteAllTextAsync(
-            shortcutPath,
-            $$"""
-            [InternetShortcut]
-            URL=steam://rungameid/1422450
-            IconFile={{iconPath}}
-            IconIndex=3
-            """);
-
-        var service = new AppIndexService(
-            _testDir,
-            new AppIndexOptions
-            {
-                ShortcutDirectories = [shortcutDir],
-                AppPathRegistryRoots = [],
-                PathDirectories = [],
-            },
-            new StubStartAppProvider([]));
-
-        await service.BuildIndexAsync();
-
-        var entry = service.Entries.Should().ContainSingle().Subject;
-        entry.Name.Should().Be("Deadlock");
-        entry.ExecutablePath.Should().Be("steam://rungameid/1422450");
-        entry.IconPath.Should().Be(iconPath);
-        entry.IconIndex.Should().Be(3);
-    }
-
-    [Fact]
     public async Task BuildIndexAsync_Indexes_StartApps_Using_Shell_Launch_Targets()
     {
         var service = new AppIndexService(
@@ -85,21 +47,25 @@ public class AppIndexServiceTests : IDisposable
         entry.SourcePriority.Should().Be(400);
     }
 
-    [Theory]
-    [InlineData("https://example.com")]
-    [InlineData("steam://openurl/https://help.steampowered.com")]
-    public async Task BuildIndexAsync_Skips_WebBackedUrlShortcuts(string url)
+    [Fact]
+    public async Task BuildIndexAsync_Ignores_Legacy_Shortcut_And_Path_Sources()
     {
         var shortcutDir = Path.Combine(_testDir, "shortcuts");
         Directory.CreateDirectory(shortcutDir);
 
-        var shortcutPath = Path.Combine(shortcutDir, "Help.url");
+        var pathDir = Path.Combine(_testDir, "path");
+        Directory.CreateDirectory(pathDir);
+
+        var shortcutPath = Path.Combine(shortcutDir, "NVIDIA App.url");
         await File.WriteAllTextAsync(
             shortcutPath,
             $$"""
             [InternetShortcut]
-            URL={{url}}
+            URL=steam://rungameid/1422450
             """);
+
+        var executablePath = Path.Combine(pathDir, "nvidia-smi.exe");
+        await File.WriteAllTextAsync(executablePath, "stub");
 
         var service = new AppIndexService(
             _testDir,
@@ -107,13 +73,21 @@ public class AppIndexServiceTests : IDisposable
             {
                 ShortcutDirectories = [shortcutDir],
                 AppPathRegistryRoots = [],
-                PathDirectories = [],
+                PathDirectories = [pathDir],
             },
-            new StubStartAppProvider([]));
+            new StubStartAppProvider(
+            [
+                new StartAppInfo(
+                    "NVIDIA App",
+                    "NVIDIACorp.NVIDIAControlPanel_56jybvy8sckqj!NVIDIAControlPanel"),
+            ]));
 
         await service.BuildIndexAsync();
 
-        service.Entries.Should().BeEmpty();
+        var entry = service.Entries.Should().ContainSingle().Subject;
+        entry.Name.Should().Be("NVIDIA App");
+        entry.ExecutablePath.Should().Be(
+            @"shell:AppsFolder\NVIDIACorp.NVIDIAControlPanel_56jybvy8sckqj!NVIDIAControlPanel");
     }
 
     private sealed class StubStartAppProvider(IReadOnlyList<StartAppInfo> apps) : IStartAppProvider
