@@ -31,6 +31,11 @@ public class SettingsServiceTests : IDisposable
         settings.CurrencyCacheTtlHours.Should().Be(6);
         settings.StartWithWindows.Should().BeTrue();
         settings.MaxResults.Should().Be(8);
+        settings.EnableCalculator.Should().BeTrue();
+        settings.EnableCurrencyConverter.Should().BeTrue();
+        settings.EnableSystemCommands.Should().BeTrue();
+        settings.EnableRunner.Should().BeTrue();
+        settings.EnableFileSearch.Should().BeTrue();
     }
 
     [Fact]
@@ -43,6 +48,11 @@ public class SettingsServiceTests : IDisposable
         settings.MaxResults = 15;
         settings.CurrencyCacheTtlHours = 12;
         settings.StartWithWindows = false;
+        settings.EnableCalculator = false;
+        settings.EnableCurrencyConverter = false;
+        settings.EnableSystemCommands = false;
+        settings.EnableRunner = false;
+        settings.EnableFileSearch = false;
 
         await service.SaveAsync(settings);
 
@@ -52,5 +62,10 @@ public class SettingsServiceTests : IDisposable
         reloaded.MaxResults.Should().Be(15);
         reloaded.CurrencyCacheTtlHours.Should().Be(12);
         reloaded.StartWithWindows.Should().BeFalse();
+        reloaded.EnableCalculator.Should().BeFalse();
+        reloaded.EnableCurrencyConverter.Should().BeFalse();
+        reloaded.EnableSystemCommands.Should().BeFalse();
+        reloaded.EnableRunner.Should().BeFalse();
+        reloaded.EnableFileSearch.Should().BeFalse();
     }
 }

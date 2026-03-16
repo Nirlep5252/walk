@@ -26,6 +26,21 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _autoStartOnLogin;
 
+    [ObservableProperty]
+    private bool _calculatorEnabled;
+
+    [ObservableProperty]
+    private bool _currencyConverterEnabled;
+
+    [ObservableProperty]
+    private bool _systemCommandsEnabled;
+
+    [ObservableProperty]
+    private bool _runnerEnabled;
+
+    [ObservableProperty]
+    private bool _fileSearchEnabled;
+
     public event Action? SaveRequested;
     public event Action? CancelRequested;
 
@@ -38,7 +53,12 @@ public partial class SettingsViewModel : ObservableObject
     public bool HasUnsavedChanges =>
         HotkeyService.CoerceModifiers(_settings.HotkeyModifiers) != HotkeyService.CoerceModifiers(HotkeyModifiers) ||
         HotkeyService.CoerceKey(_settings.HotkeyKey) != HotkeyService.CoerceKey(HotkeyKey) ||
-        _settings.StartWithWindows != AutoStartOnLogin;
+        _settings.StartWithWindows != AutoStartOnLogin ||
+        _settings.EnableCalculator != CalculatorEnabled ||
+        _settings.EnableCurrencyConverter != CurrencyConverterEnabled ||
+        _settings.EnableSystemCommands != SystemCommandsEnabled ||
+        _settings.EnableRunner != RunnerEnabled ||
+        _settings.EnableFileSearch != FileSearchEnabled;
 
     public bool ShouldShowResetHotkey =>
         HotkeyService.CoerceModifiers(HotkeyModifiers) != ResetHotkeyModifiers ||
@@ -51,6 +71,11 @@ public partial class SettingsViewModel : ObservableObject
         _hotkeyModifiers = HotkeyService.CoerceModifiers(_settings.HotkeyModifiers);
         _hotkeyKey = HotkeyService.CoerceKey(_settings.HotkeyKey);
         _autoStartOnLogin = _settings.StartWithWindows;
+        _calculatorEnabled = _settings.EnableCalculator;
+        _currencyConverterEnabled = _settings.EnableCurrencyConverter;
+        _systemCommandsEnabled = _settings.EnableSystemCommands;
+        _runnerEnabled = _settings.EnableRunner;
+        _fileSearchEnabled = _settings.EnableFileSearch;
     }
 
     public WalkSettings BuildSettings()
@@ -59,6 +84,11 @@ public partial class SettingsViewModel : ObservableObject
         updatedSettings.HotkeyModifiers = HotkeyService.CoerceModifiers(HotkeyModifiers);
         updatedSettings.HotkeyKey = HotkeyService.CoerceKey(HotkeyKey);
         updatedSettings.StartWithWindows = AutoStartOnLogin;
+        updatedSettings.EnableCalculator = CalculatorEnabled;
+        updatedSettings.EnableCurrencyConverter = CurrencyConverterEnabled;
+        updatedSettings.EnableSystemCommands = SystemCommandsEnabled;
+        updatedSettings.EnableRunner = RunnerEnabled;
+        updatedSettings.EnableFileSearch = FileSearchEnabled;
         return updatedSettings;
     }
 
@@ -159,6 +189,31 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     partial void OnAutoStartOnLoginChanged(bool value)
+    {
+        NotifyStateChanged();
+    }
+
+    partial void OnCalculatorEnabledChanged(bool value)
+    {
+        NotifyStateChanged();
+    }
+
+    partial void OnCurrencyConverterEnabledChanged(bool value)
+    {
+        NotifyStateChanged();
+    }
+
+    partial void OnSystemCommandsEnabledChanged(bool value)
+    {
+        NotifyStateChanged();
+    }
+
+    partial void OnRunnerEnabledChanged(bool value)
+    {
+        NotifyStateChanged();
+    }
+
+    partial void OnFileSearchEnabledChanged(bool value)
     {
         NotifyStateChanged();
     }

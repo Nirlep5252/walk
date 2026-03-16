@@ -5,8 +5,8 @@
     xmlns:helpers="clr-namespace:Walk.Helpers"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="Settings"
-    Width="480"
-    Height="344"
+    Width="560"
+    Height="660"
     ResizeMode="NoResize"
     WindowStartupLocation="CenterScreen"
     ShowInTaskbar="False"
@@ -15,6 +15,46 @@
     <Window.Resources>
         <helpers:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+        <Style x:Key="SectionCard" TargetType="Border">
+            <Setter Property="Background" Value="#10FFFFFF" />
+            <Setter Property="BorderBrush" Value="#14FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="18" />
+        </Style>
+
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="19" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        </Style>
+
+        <Style x:Key="SectionDescription" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,6,0,0" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+
+        <Style x:Key="RowTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        </Style>
+
+        <Style x:Key="RowDescription" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,4,0,0" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+
+        <Style x:Key="RowDivider" TargetType="Rectangle">
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Margin" Value="0,16,0,16" />
+            <Setter Property="Fill" Value="#12FFFFFF" />
+        </Style>
     </Window.Resources>
 
     <Grid Margin="24">
@@ -27,105 +67,269 @@
         <StackPanel>
             <TextBlock
                 Text="Settings"
-                FontSize="28"
+                FontSize="30"
                 FontWeight="SemiBold"
                 Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+            <TextBlock
+                Margin="0,8,0,0"
+                FontSize="13"
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                Text="Choose how Walk launches and which extra extensions are available in search." />
         </StackPanel>
 
-        <Grid Grid.Row="1" Margin="0,24,0,0" VerticalAlignment="Top">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-
-            <TextBlock
-                Grid.Row="0"
-                Grid.Column="0"
-                VerticalAlignment="Center"
-                Text="Launcher Hotkey"
-                FontSize="16"
-                FontWeight="SemiBold"
-                Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-
-            <Grid
-                Grid.Row="0"
-                Grid.Column="1"
-                HorizontalAlignment="Right">
-                <Button
-                    x:Name="RecordHotkeyButton"
-                    MinWidth="220"
-                    Padding="14,10,48,10"
-                    HorizontalContentAlignment="Left"
-                    Command="{Binding StartRecordingCommand}">
-                    <DockPanel LastChildFill="True">
-                        <ui:SymbolIcon
-                            DockPanel.Dock="Left"
-                            Symbol="Keyboard24"
-                            Margin="0,1,10,0"
-                            Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
+        <ScrollViewer
+            Grid.Row="1"
+            Margin="0,24,0,0"
+            HorizontalScrollBarVisibility="Disabled"
+            PanningMode="VerticalOnly"
+            VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,0,4,0">
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
                         <TextBlock
-                            Text="{Binding HotkeyButtonText}"
-                            FontSize="15"
-                            FontWeight="SemiBold"
-                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                    </DockPanel>
-                </Button>
-                <Button
-                    Width="30"
-                    Height="30"
-                    Margin="0,0,9,0"
-                    Padding="0"
-                    Panel.ZIndex="1"
-                    Background="Transparent"
-                    BorderBrush="Transparent"
-                    BorderThickness="0"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Center"
-                    Command="{Binding ResetHotkeyCommand}"
-                    ToolTip="Reset to Alt+Space"
-                    Visibility="{Binding ShouldShowResetHotkey, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <ui:SymbolIcon
-                        Symbol="ArrowCounterclockwise24"
-                        FontSize="14"
-                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                </Button>
-            </Grid>
+                            Style="{StaticResource SectionTitle}"
+                            Text="General" />
+                        <TextBlock
+                            Style="{StaticResource SectionDescription}"
+                            Text="Core launcher behavior and startup preferences." />
 
-            <TextBlock
-                Grid.Row="1"
-                Grid.Column="1"
-                Margin="0,8,0,0"
-                Text="{Binding StatusMessage}"
-                TextWrapping="Wrap"
-                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                Visibility="{Binding StatusMessage.Length, Converter={StaticResource CountToVisibilityConverter}}" />
+                        <Rectangle Style="{StaticResource RowDivider}" />
 
-            <TextBlock
-                Grid.Row="2"
-                Grid.Column="0"
-                Margin="0,24,0,0"
-                VerticalAlignment="Top"
-                Text="Auto Start on Login"
-                FontSize="16"
-                FontWeight="SemiBold"
-                Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
 
-            <StackPanel
-                Grid.Row="2"
-                Grid.Column="1"
-                Margin="0,24,0,0"
-                HorizontalAlignment="Right">
-                <ui:ToggleSwitch
-                    IsChecked="{Binding AutoStartOnLogin}"
-                    OffContent="Off"
-                    OnContent="On" />
+                            <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                                <TextBlock
+                                    Style="{StaticResource RowTitle}"
+                                    Text="Launcher Hotkey" />
+                                <TextBlock
+                                    Style="{StaticResource RowDescription}"
+                                    Text="Set the global shortcut used to open Walk from anywhere." />
+                            </StackPanel>
+
+                            <StackPanel
+                                Grid.Column="1"
+                                HorizontalAlignment="Right">
+                                <Grid HorizontalAlignment="Right">
+                                    <Button
+                                        x:Name="RecordHotkeyButton"
+                                        MinWidth="214"
+                                        Padding="14,10,48,10"
+                                        HorizontalContentAlignment="Left"
+                                        Command="{Binding StartRecordingCommand}">
+                                        <DockPanel LastChildFill="True">
+                                            <ui:SymbolIcon
+                                                DockPanel.Dock="Left"
+                                                Margin="0,1,10,0"
+                                                Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                                Symbol="Keyboard24" />
+                                            <TextBlock
+                                                FontSize="15"
+                                                FontWeight="SemiBold"
+                                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                Text="{Binding HotkeyButtonText}" />
+                                        </DockPanel>
+                                    </Button>
+                                    <Button
+                                        Width="30"
+                                        Height="30"
+                                        Margin="0,0,9,0"
+                                        Padding="0"
+                                        Panel.ZIndex="1"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"
+                                        BorderThickness="0"
+                                        Command="{Binding ResetHotkeyCommand}"
+                                        ToolTip="Reset to Alt+Space"
+                                        Visibility="{Binding ShouldShowResetHotkey, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <ui:SymbolIcon
+                                            FontSize="14"
+                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                            Symbol="ArrowCounterclockwise24" />
+                                    </Button>
+                                </Grid>
+                                <TextBlock
+                                    Margin="0,8,0,0"
+                                    HorizontalAlignment="Right"
+                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                    Text="{Binding StatusMessage}"
+                                    TextWrapping="Wrap"
+                                    Visibility="{Binding StatusMessage.Length, Converter={StaticResource CountToVisibilityConverter}}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Rectangle Style="{StaticResource RowDivider}" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                                <TextBlock
+                                    Style="{StaticResource RowTitle}"
+                                    Text="Auto Start on Login" />
+                                <TextBlock
+                                    Style="{StaticResource RowDescription}"
+                                    Text="Launch Walk automatically when you sign in to Windows." />
+                            </StackPanel>
+
+                            <ui:ToggleSwitch
+                                Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding AutoStartOnLogin}"
+                                OffContent="Off"
+                                OnContent="On" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Margin="0,18,0,0"
+                    Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock
+                            Style="{StaticResource SectionTitle}"
+                            Text="Extensions" />
+                        <TextBlock
+                            Style="{StaticResource SectionDescription}"
+                            Text="App Search always stays on. Disable any extra search features you do not want." />
+
+                        <Rectangle Style="{StaticResource RowDivider}" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                                <TextBlock
+                                    Style="{StaticResource RowTitle}"
+                                    Text="Calculator" />
+                                <TextBlock
+                                    Style="{StaticResource RowDescription}"
+                                    Text="Evaluate math expressions directly in the launcher." />
+                            </StackPanel>
+
+                            <ui:ToggleSwitch
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding CalculatorEnabled}"
+                                OffContent="Off"
+                                OnContent="On" />
+                        </Grid>
+
+                        <Rectangle Style="{StaticResource RowDivider}" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                                <TextBlock
+                                    Style="{StaticResource RowTitle}"
+                                    Text="Currency Converter" />
+                                <TextBlock
+                                    Style="{StaticResource RowDescription}"
+                                    Text="Convert queries like 100 USD to EUR using cached exchange rates." />
+                            </StackPanel>
+
+                            <ui:ToggleSwitch
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding CurrencyConverterEnabled}"
+                                OffContent="Off"
+                                OnContent="On" />
+                        </Grid>
+
+                        <Rectangle Style="{StaticResource RowDivider}" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                                <TextBlock
+                                    Style="{StaticResource RowTitle}"
+                                    Text="System Commands" />
+                                <TextBlock
+                                    Style="{StaticResource RowDescription}"
+                                    Text="Show actions like lock, sleep, restart, shutdown, and other quick system tasks." />
+                            </StackPanel>
+
+                            <ui:ToggleSwitch
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding SystemCommandsEnabled}"
+                                OffContent="Off"
+                                OnContent="On" />
+                        </Grid>
+
+                        <Rectangle Style="{StaticResource RowDivider}" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                                <TextBlock
+                                    Style="{StaticResource RowTitle}"
+                                    Text="Runner" />
+                                <TextBlock
+                                    Style="{StaticResource RowDescription}"
+                                    Text="Launch Run commands, shell folders, settings URIs, and recent run history." />
+                            </StackPanel>
+
+                            <ui:ToggleSwitch
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding RunnerEnabled}"
+                                OffContent="Off"
+                                OnContent="On" />
+                        </Grid>
+
+                        <Rectangle Style="{StaticResource RowDivider}" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                                <TextBlock
+                                    Style="{StaticResource RowTitle}"
+                                    Text="File Search" />
+                                <TextBlock
+                                    Style="{StaticResource RowDescription}"
+                                    Text="Browse folders and files by typing Windows paths like C:\Windows." />
+                            </StackPanel>
+
+                            <ui:ToggleSwitch
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding FileSearchEnabled}"
+                                OffContent="Off"
+                                OnContent="On" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
             </StackPanel>
-        </Grid>
+        </ScrollViewer>
 
         <Grid
             Grid.Row="2"

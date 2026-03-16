@@ -20,9 +20,11 @@ public partial class App : System.Windows.Application
     private System.Drawing.Icon? _trayDefaultIcon;
     private System.Drawing.Icon? _trayActiveIcon;
     private AppIndexService? _indexService;
+    private CacheService? _cacheService;
     private UpdateService? _updateService;
     private SettingsService? _settingsService;
     private RunHistoryService? _runHistoryService;
+    private QueryRouter? _router;
     private WalkSettings _settings = new();
     private SettingsWindow? _settingsWindow;
     private SettingsViewModel? _settingsViewModel;
@@ -50,26 +52,15 @@ public partial class App : System.Windows.Application
         _settings = await _settingsService.LoadAsync();
 
         // Services
-        var cacheService = new CacheService(dataDir);
+        _cacheService = new CacheService(dataDir);
         _indexService = new AppIndexService(dataDir);
         _updateService = new UpdateService();
         _runHistoryService = new RunHistoryService(dataDir);
         await _indexService.BuildIndexAsync();
         _indexService.StartWatching();
 
-        // Plugins
-        var plugins = new IQueryPlugin[]
-        {
-            new CalculatorPlugin(),
-            new CurrencyPlugin(cacheService, TimeSpan.FromHours(_settings.CurrencyCacheTtlHours)),
-            new SystemCommandPlugin(),
-            new RunPlugin(_runHistoryService),
-            new FileSearchPlugin(),
-            new AppSearchPlugin(_indexService),
-        };
-
-        var router = new QueryRouter(plugins);
-        var viewModel = new MainViewModel(router);
+        _router = new QueryRouter(BuildPlugins(_settings));
+        var viewModel = new MainViewModel(_router, _settings.MaxResults);
 
         // Main window
         _mainWindow = new MainWindow(viewModel);
@@ -282,6 +273,7 @@ public partial class App : System.Windows.Application
         }
 
         _settings = updatedSettings;
+        _router?.UpdatePlugins(BuildPlugins(_settings));
 
         try
         {
@@ -323,6 +315,36 @@ public partial class App : System.Windows.Application
         {
             // Ignore registry errors
         }
+    }
+
+    private IReadOnlyList<IQueryPlugin> BuildPlugins(WalkSettings settings)
+    {
+        if (_cacheService is null || _runHistoryService is null || _indexService is null)
+            return [];
+
+        var plugins = new List<IQueryPlugin>();
+
+        if (settings.EnableCalculator)
+            plugins.Add(new CalculatorPlugin());
+
+        if (settings.EnableCurrencyConverter)
+        {
+            plugins.Add(new CurrencyPlugin(
+                _cacheService,
+                TimeSpan.FromHours(settings.CurrencyCacheTtlHours)));
+        }
+
+        if (settings.EnableSystemCommands)
+            plugins.Add(new SystemCommandPlugin());
+
+        if (settings.EnableRunner)
+            plugins.Add(new RunPlugin(_runHistoryService));
+
+        if (settings.EnableFileSearch)
+            plugins.Add(new FileSearchPlugin());
+
+        plugins.Add(new AppSearchPlugin(_indexService));
+        return plugins;
     }
 
     protected override void OnExit(ExitEventArgs e)

@@ -112,4 +112,29 @@ public class QueryRouterTests
         stopwatch.ElapsedMilliseconds.Should().BeLessThan(100);
         await routeTask;
     }
+
+    [Fact]
+    public async Task UpdatePlugins_Replaces_Active_Plugin_Set()
+    {
+        var firstPlugin = Substitute.For<IQueryPlugin>();
+        firstPlugin.Name.Returns("First");
+        firstPlugin.Priority.Returns(1);
+        firstPlugin.QueryAsync("test", Arg.Any<CancellationToken>())
+            .Returns([new SearchResult { Title = "FirstResult", Score = 0.5, Actions = [] }]);
+
+        var secondPlugin = Substitute.For<IQueryPlugin>();
+        secondPlugin.Name.Returns("Second");
+        secondPlugin.Priority.Returns(1);
+        secondPlugin.QueryAsync("test", Arg.Any<CancellationToken>())
+            .Returns([new SearchResult { Title = "SecondResult", Score = 0.9, Actions = [] }]);
+
+        var router = new QueryRouter([firstPlugin]);
+        router.UpdatePlugins([secondPlugin]);
+
+        var results = await router.RouteAsync("test", CancellationToken.None);
+
+        results.Should().ContainSingle();
+        results[0].Title.Should().Be("SecondResult");
+        await firstPlugin.DidNotReceive().QueryAsync("test", Arg.Any<CancellationToken>());
+    }
 }

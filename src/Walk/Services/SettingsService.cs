@@ -11,6 +11,11 @@ public sealed class WalkSettings
     public int CurrencyCacheTtlHours { get; set; } = 6;
     public bool StartWithWindows { get; set; } = true;
     public int MaxResults { get; set; } = 8;
+    public bool EnableCalculator { get; set; } = true;
+    public bool EnableCurrencyConverter { get; set; } = true;
+    public bool EnableSystemCommands { get; set; } = true;
+    public bool EnableRunner { get; set; } = true;
+    public bool EnableFileSearch { get; set; } = true;
 
     public WalkSettings Clone()
     {
@@ -22,6 +27,11 @@ public sealed class WalkSettings
             CurrencyCacheTtlHours = CurrencyCacheTtlHours,
             StartWithWindows = StartWithWindows,
             MaxResults = MaxResults,
+            EnableCalculator = EnableCalculator,
+            EnableCurrencyConverter = EnableCurrencyConverter,
+            EnableSystemCommands = EnableSystemCommands,
+            EnableRunner = EnableRunner,
+            EnableFileSearch = EnableFileSearch,
         };
     }
 }

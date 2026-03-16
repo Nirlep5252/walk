@@ -5,11 +5,16 @@ namespace Walk.Services;
 
 public sealed class QueryRouter
 {
-    private readonly IReadOnlyList<IQueryPlugin> _plugins;
+    private IReadOnlyList<IQueryPlugin> _plugins;
 
     public QueryRouter(IEnumerable<IQueryPlugin> plugins)
     {
-        _plugins = plugins.OrderByDescending(p => p.Priority).ToList();
+        _plugins = OrderPlugins(plugins);
+    }
+
+    public void UpdatePlugins(IEnumerable<IQueryPlugin> plugins)
+    {
+        _plugins = OrderPlugins(plugins);
     }
 
     public async Task<IReadOnlyList<SearchResult>> RouteAsync(string query, CancellationToken ct)
@@ -21,7 +26,8 @@ public sealed class QueryRouter
         if (ct.IsCancellationRequested)
             return [];
 
-        var tasks = _plugins.Select(p => SafeQueryAsync(p, trimmedQuery, ct)).ToArray();
+        var plugins = _plugins;
+        var tasks = plugins.Select(p => SafeQueryAsync(p, trimmedQuery, ct)).ToArray();
         var results = await Task.WhenAll(tasks).ConfigureAwait(false);
 
         if (ct.IsCancellationRequested)
@@ -48,5 +54,10 @@ public sealed class QueryRouter
         {
             return [];
         }
+    }
+
+    private static IReadOnlyList<IQueryPlugin> OrderPlugins(IEnumerable<IQueryPlugin> plugins)
+    {
+        return plugins.OrderByDescending(p => p.Priority).ToList();
     }
 }
