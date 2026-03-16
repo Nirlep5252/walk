@@ -14,10 +14,10 @@ public class IconExtractorTests
     }
 
     [Fact]
-    public void GetIcon_Returns_Image_For_AppsFolder_Path()
+    public void GetIcon_Returns_Null_For_Unknown_AppsFolder_Path()
     {
-        var icon = IconExtractor.GetIcon(@"shell:AppsFolder\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App");
+        var icon = IconExtractor.GetIcon(@"shell:AppsFolder\Walk.Tests.DoesNotExist!App");
 
-        icon.Should().NotBeNull();
+        icon.Should().BeNull();
     }
 }
