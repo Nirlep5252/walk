@@ -29,6 +29,33 @@ public class AppSearchPluginTests
     }
 
     [Fact]
+    public async Task QueryAsync_Prefers_Installed_App_Name_Over_Path_Executable_Matches()
+    {
+        var plugin = new AppSearchPlugin(
+            new StubAppIndexService(
+            [
+                new AppEntry
+                {
+                    Name = "amd-smi",
+                    ExecutablePath = @"C:\Windows\System32\amd-smi.exe",
+                    RevealPath = @"C:\Windows\System32\amd-smi.exe",
+                    SourcePriority = 100,
+                },
+                new AppEntry
+                {
+                    Name = "AMD Software",
+                    ExecutablePath = @"shell:AppsFolder\AdvancedMicroDevicesInc-2.AMDRadeonSoftware_0a9344xs7nr4m!AMDRadeonsoftwareUWP",
+                    SourcePriority = 400,
+                },
+            ]));
+
+        var results = await plugin.QueryAsync("AMD", CancellationToken.None);
+
+        results.Should().NotBeEmpty();
+        results[0].Title.Should().Be("AMD Software");
+    }
+
+    [Fact]
     public async Task QueryAsync_Omits_Reveal_Action_For_ProtocolTargets()
     {
         var plugin = new AppSearchPlugin(

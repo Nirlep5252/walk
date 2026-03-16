@@ -24,6 +24,7 @@ public sealed class AppIndexService : IAppIndexService, IDisposable
         ".ps1",
     ];
 
+    private const int StartAppsSourcePriority = 400;
     private const int ShortcutSourcePriority = 300;
     private const int AppPathSourcePriority = 200;
     private const int PathSourcePriority = 100;
@@ -31,14 +32,19 @@ public sealed class AppIndexService : IAppIndexService, IDisposable
 
     private readonly string _indexPath;
     private readonly AppIndexOptions _options;
+    private readonly IStartAppProvider _startAppProvider;
     private readonly List<FileSystemWatcher> _watchers = [];
     private List<AppEntry> _entries = [];
     private CancellationTokenSource? _rebuildCts;
 
-    public AppIndexService(string dataDir, AppIndexOptions? options = null)
+    public AppIndexService(
+        string dataDir,
+        AppIndexOptions? options = null,
+        IStartAppProvider? startAppProvider = null)
     {
         _indexPath = Path.Combine(dataDir, "appindex.json");
         _options = options ?? new AppIndexOptions();
+        _startAppProvider = startAppProvider ?? new PowerShellStartAppProvider();
     }
 
     public IReadOnlyList<AppEntry> Entries => _entries;
@@ -47,6 +53,7 @@ public sealed class AppIndexService : IAppIndexService, IDisposable
     {
         var entriesByIdentity = new Dictionary<string, IndexedEntry>(StringComparer.OrdinalIgnoreCase);
 
+        await IndexStartAppEntriesAsync(entriesByIdentity);
         IndexShortcutEntries(entriesByIdentity);
         IndexAppPathEntries(entriesByIdentity);
         IndexPathEntries(entriesByIdentity);
@@ -145,6 +152,25 @@ public sealed class AppIndexService : IAppIndexService, IDisposable
         }
     }
 
+    private async Task IndexStartAppEntriesAsync(IDictionary<string, IndexedEntry> entriesByIdentity)
+    {
+        var startApps = await _startAppProvider.GetAppsAsync();
+        foreach (var app in startApps)
+        {
+            if (string.IsNullOrWhiteSpace(app.Name) || string.IsNullOrWhiteSpace(app.AppId))
+                continue;
+
+            AddOrMergeEntry(
+                entriesByIdentity,
+                new AppEntry
+                {
+                    Name = app.Name.Trim(),
+                    ExecutablePath = BuildStartAppLaunchTarget(app.AppId),
+                },
+                StartAppsSourcePriority);
+        }
+    }
+
     private void IndexAppPathEntries(IDictionary<string, IndexedEntry> entriesByIdentity)
     {
         foreach (var registryPath in _options.AppPathRegistryRoots)
@@ -219,6 +245,7 @@ public sealed class AppIndexService : IAppIndexService, IDisposable
         AppEntry incomingEntry,
         int incomingPriority)
     {
+        incomingEntry = CloneEntry(incomingEntry, incomingPriority);
         var identity = BuildEntryIdentity(incomingEntry.ExecutablePath, incomingEntry.Arguments);
         if (!entriesByIdentity.TryGetValue(identity, out var existingEntry))
         {
@@ -251,6 +278,7 @@ public sealed class AppIndexService : IAppIndexService, IDisposable
         {
             Name = name,
             ExecutablePath = preferredEntry.ExecutablePath,
+            SourcePriority = Math.Max(existingEntry.SourcePriority, incomingEntry.SourcePriority),
             Arguments = preferredEntry.Arguments ?? fallbackEntry.Arguments,
             WorkingDirectory = preferredEntry.WorkingDirectory ?? fallbackEntry.WorkingDirectory,
             RevealPath = preferredEntry.RevealPath ?? fallbackEntry.RevealPath,
@@ -274,6 +302,23 @@ public sealed class AppIndexService : IAppIndexService, IDisposable
             return existingName;
 
         return incomingName.Length > existingName.Length ? incomingName : existingName;
+    }
+
+    private static AppEntry CloneEntry(AppEntry entry, int sourcePriority)
+    {
+        return new AppEntry
+        {
+            Name = entry.Name,
+            ExecutablePath = entry.ExecutablePath,
+            SourcePriority = sourcePriority,
+            IconPath = entry.IconPath,
+            IconIndex = entry.IconIndex,
+            Arguments = entry.Arguments,
+            WorkingDirectory = entry.WorkingDirectory,
+            RevealPath = entry.RevealPath,
+            LaunchCount = entry.LaunchCount,
+            LastUsed = entry.LastUsed,
+        };
     }
 
     private static IEnumerable<string> EnumerateFilesSafely(string directory, string filter)
@@ -576,6 +621,11 @@ public sealed class AppIndexService : IAppIndexService, IDisposable
     private static string BuildEntryIdentity(string executablePath, string? arguments)
     {
         return $"{executablePath.Trim()}\n{NormalizeValue(arguments) ?? ""}";
+    }
+
+    private static string BuildStartAppLaunchTarget(string appId)
+    {
+        return $@"shell:AppsFolder\{appId.Trim()}";
     }
 
     private static string? ResolvePathValue(string? value)

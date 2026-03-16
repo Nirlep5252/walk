@@ -86,7 +86,7 @@ public sealed class AppSearchPlugin : IQueryPlugin
             var result = new SearchResult
             {
                 Title = entry.Name,
-                Subtitle = entry.DisplayPath,
+                Subtitle = GetSubtitle(entry),
                 PluginName = Name,
                 Score = score,
                 IconGlyph = "\u25B6",
@@ -111,15 +111,23 @@ public sealed class AppSearchPlugin : IQueryPlugin
 
     private static FuzzyMatchResult MatchEntry(string query, AppEntry entry)
     {
-        var bestMatch = FuzzyMatcher.Match(query, entry.Name);
-        foreach (var alias in GetSearchAliases(entry))
+        var bestScore = ScoreDisplayName(FuzzyMatcher.Match(query, entry.Name));
+        var isMatch = bestScore > 0;
+
+        foreach (var alias in GetSearchAliases(entry).Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var aliasMatch = FuzzyMatcher.Match(query, alias);
-            if (aliasMatch.IsMatch && aliasMatch.Score > bestMatch.Score)
-                bestMatch = aliasMatch;
+            if (!aliasMatch.IsMatch)
+                continue;
+
+            isMatch = true;
+            bestScore = Math.Max(bestScore, ScoreAlias(aliasMatch));
         }
 
-        return bestMatch;
+        if (!isMatch)
+            return new FuzzyMatchResult(false, 0.0);
+
+        return new FuzzyMatchResult(true, bestScore + GetSourceBoost(entry.SourcePriority));
     }
 
     private static IEnumerable<string> GetSearchAliases(AppEntry entry)
@@ -145,17 +153,42 @@ public sealed class AppSearchPlugin : IQueryPlugin
         return alias.Length > 0;
     }
 
+    private static double ScoreDisplayName(FuzzyMatchResult match)
+    {
+        return match.IsMatch ? match.Score : 0.0;
+    }
+
+    private static double ScoreAlias(FuzzyMatchResult match)
+    {
+        return match.IsMatch ? match.Score * 0.75 : 0.0;
+    }
+
+    private static double GetSourceBoost(int sourcePriority)
+    {
+        return Math.Min(0.15, sourcePriority / 3000d);
+    }
+
     private static string? GetIconPath(AppEntry entry)
     {
         if (!string.IsNullOrWhiteSpace(entry.IconPath))
         {
             var expandedIconPath = Environment.ExpandEnvironmentVariables(entry.IconPath);
-            if (File.Exists(expandedIconPath))
+            if (File.Exists(expandedIconPath) || IconExtractor.IsShellPath(expandedIconPath))
                 return expandedIconPath;
         }
 
         var expandedExecutablePath = Environment.ExpandEnvironmentVariables(entry.ExecutablePath);
-        return File.Exists(expandedExecutablePath) ? expandedExecutablePath : null;
+        return File.Exists(expandedExecutablePath) || IconExtractor.IsShellPath(expandedExecutablePath)
+            ? expandedExecutablePath
+            : null;
+    }
+
+    private static string GetSubtitle(AppEntry entry)
+    {
+        if (entry.ExecutablePath.StartsWith(@"shell:AppsFolder\", StringComparison.OrdinalIgnoreCase))
+            return "Installed app";
+
+        return entry.DisplayPath;
     }
 
     private static string? GetRevealPath(AppEntry entry)

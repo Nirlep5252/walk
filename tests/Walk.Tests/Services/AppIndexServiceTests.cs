@@ -46,7 +46,8 @@ public class AppIndexServiceTests : IDisposable
                 ShortcutDirectories = [shortcutDir],
                 AppPathRegistryRoots = [],
                 PathDirectories = [],
-            });
+            },
+            new StubStartAppProvider([]));
 
         await service.BuildIndexAsync();
 
@@ -55,6 +56,33 @@ public class AppIndexServiceTests : IDisposable
         entry.ExecutablePath.Should().Be("steam://rungameid/1422450");
         entry.IconPath.Should().Be(iconPath);
         entry.IconIndex.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task BuildIndexAsync_Indexes_StartApps_Using_Shell_Launch_Targets()
+    {
+        var service = new AppIndexService(
+            _testDir,
+            new AppIndexOptions
+            {
+                ShortcutDirectories = [],
+                AppPathRegistryRoots = [],
+                PathDirectories = [],
+            },
+            new StubStartAppProvider(
+            [
+                new StartAppInfo(
+                    "AMD Software",
+                    "AdvancedMicroDevicesInc-2.AMDRadeonSoftware_0a9344xs7nr4m!AMDRadeonsoftwareUWP"),
+            ]));
+
+        await service.BuildIndexAsync();
+
+        var entry = service.Entries.Should().ContainSingle().Subject;
+        entry.Name.Should().Be("AMD Software");
+        entry.ExecutablePath.Should().Be(
+            @"shell:AppsFolder\AdvancedMicroDevicesInc-2.AMDRadeonSoftware_0a9344xs7nr4m!AMDRadeonsoftwareUWP");
+        entry.SourcePriority.Should().Be(400);
     }
 
     [Theory]
@@ -80,10 +108,19 @@ public class AppIndexServiceTests : IDisposable
                 ShortcutDirectories = [shortcutDir],
                 AppPathRegistryRoots = [],
                 PathDirectories = [],
-            });
+            },
+            new StubStartAppProvider([]));
 
         await service.BuildIndexAsync();
 
         service.Entries.Should().BeEmpty();
+    }
+
+    private sealed class StubStartAppProvider(IReadOnlyList<StartAppInfo> apps) : IStartAppProvider
+    {
+        public Task<IReadOnlyList<StartAppInfo>> GetAppsAsync(CancellationToken ct = default)
+        {
+            return Task.FromResult(apps);
+        }
     }
 }
