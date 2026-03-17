@@ -1,4 +1,5 @@
 using System.IO;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Interop;
 using Walk.Helpers;
@@ -17,17 +18,20 @@ public partial class App : System.Windows.Application
     private Forms.NotifyIcon? _trayIcon;
     private Forms.ToolStripMenuItem? _trayStatusItem;
     private Forms.ToolStripMenuItem? _checkForUpdatesItem;
+    private Forms.ToolStripMenuItem? _whatsNewItem;
     private System.Drawing.Icon? _trayDefaultIcon;
     private System.Drawing.Icon? _trayActiveIcon;
     private AppIndexService? _indexService;
     private CacheService? _cacheService;
     private UpdateService? _updateService;
+    private ChangelogService? _changelogService;
     private SettingsService? _settingsService;
     private RunHistoryService? _runHistoryService;
     private QueryRouter? _router;
     private WalkSettings _settings = new();
     private SettingsWindow? _settingsWindow;
     private SettingsViewModel? _settingsViewModel;
+    private WhatsNewWindow? _whatsNewWindow;
 
     public App()
     {
@@ -54,7 +58,8 @@ public partial class App : System.Windows.Application
         // Services
         _cacheService = new CacheService(dataDir);
         _indexService = new AppIndexService(dataDir);
-        _updateService = new UpdateService();
+        _changelogService = new ChangelogService(dataDir);
+        _updateService = new UpdateService(_changelogService);
         _runHistoryService = new RunHistoryService(dataDir);
         await _indexService.BuildIndexAsync();
         _indexService.StartWatching();
@@ -139,6 +144,7 @@ public partial class App : System.Windows.Application
 
         // System tray
         SetupTray(viewModel, _updateService);
+        await ShowPendingChangelogAsync();
         _updateService.Start();
     }
 
@@ -154,9 +160,11 @@ public partial class App : System.Windows.Application
             Enabled = updateService.CanCheckForUpdates,
         };
         _checkForUpdatesItem.Click += async (_, _) => await updateService.CheckForUpdatesAsync(manual: true);
+        _whatsNewItem = new Forms.ToolStripMenuItem("What's New", null, (_, _) => LaunchWhatsNewDialogProcess());
 
         contextMenu.Items.Add(_trayStatusItem);
         contextMenu.Items.Add(_checkForUpdatesItem);
+        contextMenu.Items.Add(_whatsNewItem);
         contextMenu.Items.Add(new Forms.ToolStripSeparator());
         contextMenu.Items.Add("Show Launcher", null, (_, _) =>
             Current.Dispatcher.Invoke(() => viewModel.Show()));
@@ -211,6 +219,111 @@ public partial class App : System.Windows.Application
     {
         if (_trayStatusItem is not null)
             _trayStatusItem.Text = statusText;
+    }
+
+    private async Task ShowPendingChangelogAsync()
+    {
+        if (_changelogService is null || _updateService is null)
+            return;
+
+        var entry = await _changelogService.GetPendingAsync(_updateService.Version);
+        if (entry is null)
+            return;
+
+        ShowChangelogWindow(entry, mandatory: true);
+        await _changelogService.MarkPendingAsSeenAsync(entry.Version);
+    }
+
+    private async Task ShowLatestChangelogAsync()
+    {
+        if (_changelogService is null)
+            return;
+
+        var entry = await _changelogService.GetLatestAsync();
+        if (entry is null)
+        {
+            ShowWhatsNewWindow(new WhatsNewWindow(), modal: false);
+            return;
+        }
+
+        ShowWhatsNewWindow(new WhatsNewWindow(entry, mandatory: false), modal: false);
+    }
+
+    private void ShowChangelogWindow(ChangelogEntry entry, bool mandatory)
+    {
+        ShowWhatsNewWindow(new WhatsNewWindow(entry, mandatory), modal: mandatory, forceFront: mandatory);
+    }
+
+    private void LaunchWhatsNewDialogProcess()
+    {
+        var exePath = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(exePath))
+            return;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = exePath,
+                Arguments = "--show-whats-new",
+                UseShellExecute = true,
+                WorkingDirectory = AppContext.BaseDirectory,
+            });
+        }
+        catch
+        {
+            Current.Dispatcher.Invoke(() => _ = ShowLatestChangelogAsync());
+        }
+    }
+
+    private void ShowWhatsNewWindow(WhatsNewWindow window, bool modal, bool forceFront = false, bool showInTaskbar = false)
+    {
+        if (!modal && _whatsNewWindow is not null)
+        {
+            _whatsNewWindow.ShowInTaskbar = showInTaskbar;
+            _whatsNewWindow.Show();
+            _whatsNewWindow.WindowState = WindowState.Normal;
+            _whatsNewWindow.Activate();
+            _whatsNewWindow.Focus();
+            return;
+        }
+
+        if (_mainWindow?.IsVisible == true)
+            window.Owner = _mainWindow;
+
+        window.ShowInTaskbar = showInTaskbar;
+
+        if (modal)
+        {
+            if (forceFront)
+            {
+                window.Topmost = true;
+                window.Loaded += (_, _) =>
+                {
+                    window.Activate();
+                    window.Focus();
+                };
+            }
+
+            window.ShowDialog();
+            return;
+        }
+
+        _whatsNewWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_whatsNewWindow, window))
+                _whatsNewWindow = null;
+        };
+
+        window.Show();
+        window.Activate();
+        window.Focus();
+        if (forceFront)
+        {
+            window.Topmost = true;
+            window.Topmost = false;
+        }
     }
 
     private bool TryRegisterHotkey(WalkSettings settings, out string errorMessage)

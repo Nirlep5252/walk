@@ -5,17 +5,18 @@ namespace Walk.Services;
 
 public sealed class UpdateService : IDisposable
 {
-    private static readonly TimeSpan InitialCheckDelay = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan PeriodicCheckInterval = TimeSpan.FromHours(6);
 
+    private readonly ChangelogService _changelogService;
     private readonly bool _isDevelopmentBuild;
     private readonly UpdateManager? _updateManager;
     private readonly CancellationTokenSource _shutdown = new();
     private readonly SemaphoreSlim _updateLock = new(1, 1);
     private Task? _backgroundLoop;
 
-    public UpdateService()
+    public UpdateService(ChangelogService changelogService)
     {
+        _changelogService = changelogService;
         _isDevelopmentBuild = AppVersionService.IsDevelopmentBuild(AppContext.BaseDirectory);
         Version = AppVersionService.GetDisplayVersion();
         StatusText = BuildStatusText();
@@ -78,6 +79,22 @@ public sealed class UpdateService : IDisposable
             }
 
             var targetVersion = update.TargetFullRelease.Version.ToString();
+            var releaseNotes = update.TargetFullRelease.NotesMarkdown;
+            if (string.IsNullOrWhiteSpace(releaseNotes))
+            {
+                PublishStatus(manual
+                    ? "update blocked: changelog missing"
+                    : "update blocked until changelog exists");
+                return;
+            }
+
+            await _changelogService.StageAsync(new ChangelogEntry
+            {
+                Version = targetVersion,
+                Markdown = releaseNotes,
+                RecordedAtUtc = DateTimeOffset.UtcNow,
+            }, cancellationToken);
+
             PublishStatus($"downloading v{targetVersion}");
 
             await _updateManager.DownloadUpdatesAsync(
@@ -120,7 +137,6 @@ public sealed class UpdateService : IDisposable
     {
         try
         {
-            await Task.Delay(InitialCheckDelay, cancellationToken);
             await CheckForUpdatesAsync(cancellationToken: cancellationToken);
 
             using var timer = new PeriodicTimer(PeriodicCheckInterval);

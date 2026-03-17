@@ -3,6 +3,8 @@ bin/
 obj/
 artifacts/
 Releases/
+!docs/releases/
+!docs/releases/*.md
 
 # IDE files
 .vs/

@@ -15,7 +15,8 @@ This repo now uses Velopack for:
 ## Normal release flow
 
 1. Pick the version you want to ship, for example `0.2.0`.
-2. Create and push a tag named `v0.2.0`.
+2. Create `docs/releases/0.2.0.md` with the markdown changelog for that release. This file is now mandatory and the release workflow fails without it.
+3. Create and push a tag named `v0.2.0`.
 
 ```powershell
 git tag v0.2.0
@@ -53,5 +54,6 @@ Local release artifacts are written to:
 ## Versioning notes
 
 - The app displays its version in the launcher footer and tray menu.
+- The updater also displays the markdown from `docs/releases/<version>.md` after each installed update.
 - GitHub tags should be `vX.Y.Z`.
 - The workflow strips the leading `v` and publishes the app as `X.Y.Z`.

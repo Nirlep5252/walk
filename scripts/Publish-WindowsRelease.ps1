@@ -6,6 +6,8 @@ param(
 
     [string]$Configuration = "Release",
 
+    [string]$ReleaseNotesPath,
+
     [switch]$UploadToGitHub,
 
     [switch]$PublishRelease
@@ -18,6 +20,19 @@ $publishDir = Join-Path $repoRoot "artifacts\publish\$Runtime"
 $releaseDir = Join-Path $repoRoot "artifacts\Releases"
 $projectPath = Join-Path $repoRoot "src\Walk\Walk.csproj"
 $iconPath = Join-Path $repoRoot "src\Walk\Assets\walk-app.ico"
+
+if ([string]::IsNullOrWhiteSpace($ReleaseNotesPath)) {
+    $ReleaseNotesPath = Join-Path $repoRoot "docs\releases\$Version.md"
+}
+
+if (-not (Test-Path $ReleaseNotesPath -PathType Leaf)) {
+    throw "Release notes are mandatory. Create '$ReleaseNotesPath' before publishing version $Version."
+}
+
+$releaseNotesContent = Get-Content $ReleaseNotesPath -Raw
+if ([string]::IsNullOrWhiteSpace($releaseNotesContent)) {
+    throw "Release notes file '$ReleaseNotesPath' is empty. Add markdown changelog content before publishing version $Version."
+}
 
 function Invoke-Step {
     param(
@@ -92,7 +107,8 @@ Invoke-Step "dotnet" @(
     "--mainExe", "Walk.exe",
     "--packDir", $publishDir,
     "--outputDir", $releaseDir,
-    "--icon", $iconPath
+    "--icon", $iconPath,
+    "--releaseNotes", $ReleaseNotesPath
 )
 
 if ($UploadToGitHub) {

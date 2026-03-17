@@ -31,4 +31,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $version = "${{ github.ref_name }}".TrimStart("v")
-          ./scripts/Publish-WindowsRelease.ps1 -Version $version -UploadToGitHub -PublishRelease
+          $releaseNotes = "docs/releases/$version.md"
+          if (-not (Test-Path $releaseNotes -PathType Leaf)) {
+            throw "Missing release notes file: $releaseNotes"
+          }
+
+          ./scripts/Publish-WindowsRelease.ps1 -Version $version -ReleaseNotesPath $releaseNotes -UploadToGitHub -PublishRelease
