@@ -25,6 +25,7 @@ public partial class App : System.Windows.Application
     private CacheService? _cacheService;
     private UpdateService? _updateService;
     private ChangelogService? _changelogService;
+    private ChangelogRecoveryService? _changelogRecoveryService;
     private SettingsService? _settingsService;
     private RunHistoryService? _runHistoryService;
     private QueryRouter? _router;
@@ -59,6 +60,7 @@ public partial class App : System.Windows.Application
         _cacheService = new CacheService(dataDir);
         _indexService = new AppIndexService(dataDir);
         _changelogService = new ChangelogService(dataDir);
+        _changelogRecoveryService = new ChangelogRecoveryService(_changelogService, new ReleaseNotesService());
         _updateService = new UpdateService(_changelogService);
         _runHistoryService = new RunHistoryService(dataDir);
         await _indexService.BuildIndexAsync();
@@ -141,6 +143,8 @@ public partial class App : System.Windows.Application
 
         // Auto-start
         ConfigureAutoStart(_settings.StartWithWindows);
+
+        await _changelogRecoveryService.EnsureCurrentVersionPendingAsync(_updateService.Version);
 
         // System tray
         SetupTray(viewModel, _updateService);
@@ -236,10 +240,10 @@ public partial class App : System.Windows.Application
 
     private async Task ShowLatestChangelogAsync()
     {
-        if (_changelogService is null)
+        if (_changelogRecoveryService is null || _updateService is null)
             return;
 
-        var entry = await _changelogService.GetLatestAsync();
+        var entry = await _changelogRecoveryService.GetLatestAvailableForVersionAsync(_updateService.Version);
         if (entry is null)
         {
             ShowWhatsNewWindow(new WhatsNewWindow(), modal: false);

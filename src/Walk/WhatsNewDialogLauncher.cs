@@ -15,7 +15,9 @@ public static class WhatsNewDialogLauncher
         try
         {
             var changelogService = new ChangelogService(dataDir);
-            var entry = changelogService.GetLatestAsync().GetAwaiter().GetResult();
+            var changelogRecoveryService = new ChangelogRecoveryService(changelogService, new ReleaseNotesService());
+            var version = AppVersionService.GetDisplayVersion();
+            var entry = changelogRecoveryService.GetLatestAvailableForVersionAsync(version).GetAwaiter().GetResult();
 
             var app = new System.Windows.Application
             {

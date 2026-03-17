@@ -39,6 +39,20 @@ public sealed class ChangelogService
         return state.LatestEntry;
     }
 
+    public async Task SaveLatestAsync(ChangelogEntry entry, CancellationToken cancellationToken = default)
+    {
+        var state = await LoadStateAsync(cancellationToken);
+        state.LatestEntry = entry;
+
+        if (state.PendingEntry is not null &&
+            string.Equals(state.PendingEntry.Version, entry.Version, StringComparison.OrdinalIgnoreCase))
+        {
+            state.PendingEntry = null;
+        }
+
+        await SaveStateAsync(state, cancellationToken);
+    }
+
     public async Task<ChangelogEntry?> GetPendingAsync(string currentVersion, CancellationToken cancellationToken = default)
     {
         var state = await LoadStateAsync(cancellationToken);
