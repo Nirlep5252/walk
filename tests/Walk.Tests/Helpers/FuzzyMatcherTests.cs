@@ -11,7 +11,9 @@ public class FuzzyMatcherTests
     [InlineData("np", "Notepad", true)]
     [InlineData("ntp", "Notepad", true)]
     [InlineData("chrome", "Google Chrome", true)]
+    [InlineData("chorme", "Google Chrome", true)]
     [InlineData("gc", "Google Chrome", true)]
+    [InlineData("termnal", "Windows Terminal", true)]
     [InlineData("xyz", "Notepad", false)]
     [InlineData("", "Notepad", true)]
     [InlineData("notepadx", "Notepad", false)]
@@ -37,6 +39,16 @@ public class FuzzyMatcherTests
         var substring = FuzzyMatcher.Match("tepa", "Notepad");
 
         prefix.Score.Should().BeGreaterThan(substring.Score);
+    }
+
+    [Fact]
+    public void Match_Scores_Substring_Higher_Than_Typo_Match()
+    {
+        var substring = FuzzyMatcher.Match("chrome", "Google Chrome");
+        var typo = FuzzyMatcher.Match("chorme", "Google Chrome");
+
+        substring.Score.Should().BeGreaterThan(typo.Score);
+        typo.IsMatch.Should().BeTrue();
     }
 
     [Fact]

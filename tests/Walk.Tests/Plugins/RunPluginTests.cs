@@ -39,6 +39,7 @@ public class RunPluginTests : IDisposable
 
     [Theory]
     [InlineData("terminal", "Windows Terminal")]
+    [InlineData("termnal", "Windows Terminal")]
     [InlineData("firewall", "Windows Firewall")]
     [InlineData("bluetooth", "Bluetooth Devices")]
     public async Task QueryAsync_Finds_New_Default_Run_Entries(string query, string expectedTitle)

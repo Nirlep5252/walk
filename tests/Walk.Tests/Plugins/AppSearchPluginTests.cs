@@ -29,6 +29,26 @@ public class AppSearchPluginTests
     }
 
     [Fact]
+    public async Task QueryAsync_Matches_DisplayName_When_Query_Has_Typo()
+    {
+        var plugin = new AppSearchPlugin(
+            new StubAppIndexService(
+            [
+                new AppEntry
+                {
+                    Name = "Google Chrome",
+                    ExecutablePath = @"C:\Apps\Chrome\chrome.exe",
+                    RevealPath = @"C:\Apps\Chrome\chrome.exe",
+                },
+            ]));
+
+        var results = await plugin.QueryAsync("chorme", CancellationToken.None);
+
+        results.Should().ContainSingle();
+        results[0].Title.Should().Be("Google Chrome");
+    }
+
+    [Fact]
     public async Task QueryAsync_Prefers_Installed_App_Name_Over_Path_Executable_Matches()
     {
         var plugin = new AppSearchPlugin(

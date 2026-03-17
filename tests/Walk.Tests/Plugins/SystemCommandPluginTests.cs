@@ -25,6 +25,7 @@ public class SystemCommandPluginTests
     [InlineData("shut")]
     [InlineData("rest")]
     [InlineData("loc")]
+    [InlineData("setings")]
     public async Task QueryAsync_Finds_Commands_By_Partial_Match(string query)
     {
         var results = await _plugin.QueryAsync(query, CancellationToken.None);
