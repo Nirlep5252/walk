@@ -10,7 +10,7 @@ This repo now uses Velopack for:
 
 1. Make sure the repo stays public or provide authenticated GitHub access for downloads.
 2. Make sure GitHub Actions is enabled for the repository.
-3. Configure Windows signing if you have it. Unsigned `.exe` assets are likely to be blocked by SmartScreen and antivirus reputation checks, so this workflow falls back to shipping non-installer assets when signing is not configured.
+3. Configure Windows signing if you have it. Unsigned `.exe` assets are still likely to be blocked by SmartScreen and antivirus reputation checks, but this workflow keeps generating the standard installer and portable assets.
 
 ### Signing options
 
@@ -20,7 +20,7 @@ The release script now supports exactly one Windows signing mode:
 - `VELOPACK_SIGN_PARAMS`
 - `VELOPACK_SIGN_TEMPLATE`
 
-If none of those are configured, tagged releases still publish, but the workflow tells Velopack not to generate the installer at all and ships the portable/update assets only.
+If none of those are configured, tagged releases still publish as normal, including `Setup.exe`.
 
 #### Recommended: Azure Trusted Signing
 
@@ -88,7 +88,6 @@ That tag triggers [`.github/workflows/release.yml`](../.github/workflows/release
 - publishes the app for `win-x64`
 - signs the Velopack installer assets when signing is configured
 - builds Velopack installer and update packages
-- skips installer generation when signing is not configured
 - uploads the release assets to the matching GitHub release
 - publishes that GitHub release
 

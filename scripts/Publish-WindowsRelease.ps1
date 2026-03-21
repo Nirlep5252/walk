@@ -172,10 +172,6 @@ $packArgs = @(
     "--releaseNotes", $ReleaseNotesPath
 )
 
-if ($configuredSigningModes.Count -eq 0) {
-    $packArgs += "--noInst"
-}
-
 if (-not [string]::IsNullOrWhiteSpace($AzureTrustedSignFile)) {
     $packArgs += @("--azureTrustedSignFile", (Resolve-Path $AzureTrustedSignFile).Path)
 } elseif (-not [string]::IsNullOrWhiteSpace($SignTemplate)) {
