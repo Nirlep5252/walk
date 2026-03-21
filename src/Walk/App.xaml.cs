@@ -1,5 +1,4 @@
 using System.IO;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Interop;
 using Walk.Helpers;
@@ -25,7 +24,6 @@ public partial class App : System.Windows.Application
     private CacheService? _cacheService;
     private UpdateService? _updateService;
     private ChangelogService? _changelogService;
-    private ChangelogRecoveryService? _changelogRecoveryService;
     private SettingsService? _settingsService;
     private RunHistoryService? _runHistoryService;
     private QueryRouter? _router;
@@ -60,7 +58,6 @@ public partial class App : System.Windows.Application
         _cacheService = new CacheService(dataDir);
         _indexService = new AppIndexService(dataDir);
         _changelogService = new ChangelogService(dataDir);
-        _changelogRecoveryService = new ChangelogRecoveryService(_changelogService, new ReleaseNotesService());
         _updateService = new UpdateService(_changelogService);
         _runHistoryService = new RunHistoryService(dataDir);
         await _indexService.BuildIndexAsync();
@@ -144,8 +141,6 @@ public partial class App : System.Windows.Application
         // Auto-start
         ConfigureAutoStart(_settings.StartWithWindows);
 
-        await _changelogRecoveryService.EnsureCurrentVersionPendingAsync(_updateService.Version);
-
         // System tray
         SetupTray(viewModel, _updateService);
         await ShowPendingChangelogAsync();
@@ -164,7 +159,7 @@ public partial class App : System.Windows.Application
             Enabled = updateService.CanCheckForUpdates,
         };
         _checkForUpdatesItem.Click += async (_, _) => await updateService.CheckForUpdatesAsync(manual: true);
-        _whatsNewItem = new Forms.ToolStripMenuItem("What's New", null, (_, _) => LaunchWhatsNewDialogProcess());
+        _whatsNewItem = new Forms.ToolStripMenuItem("What's New", null, async (_, _) => await ShowLatestChangelogAsync());
 
         contextMenu.Items.Add(_trayStatusItem);
         contextMenu.Items.Add(_checkForUpdatesItem);
@@ -240,10 +235,10 @@ public partial class App : System.Windows.Application
 
     private async Task ShowLatestChangelogAsync()
     {
-        if (_changelogRecoveryService is null || _updateService is null)
+        if (_changelogService is null)
             return;
 
-        var entry = await _changelogRecoveryService.GetLatestAvailableForVersionAsync(_updateService.Version);
+        var entry = await _changelogService.GetLatestAsync();
         if (entry is null)
         {
             ShowWhatsNewWindow(new WhatsNewWindow(), modal: false);
@@ -256,28 +251,6 @@ public partial class App : System.Windows.Application
     private void ShowChangelogWindow(ChangelogEntry entry, bool mandatory)
     {
         ShowWhatsNewWindow(new WhatsNewWindow(entry, mandatory), modal: mandatory, forceFront: mandatory);
-    }
-
-    private void LaunchWhatsNewDialogProcess()
-    {
-        var exePath = Environment.ProcessPath;
-        if (string.IsNullOrWhiteSpace(exePath))
-            return;
-
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = exePath,
-                Arguments = "--show-whats-new",
-                UseShellExecute = true,
-                WorkingDirectory = AppContext.BaseDirectory,
-            });
-        }
-        catch
-        {
-            Current.Dispatcher.Invoke(() => _ = ShowLatestChangelogAsync());
-        }
     }
 
     private void ShowWhatsNewWindow(WhatsNewWindow window, bool modal, bool forceFront = false, bool showInTaskbar = false)

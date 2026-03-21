@@ -5,17 +5,9 @@ namespace Walk;
 
 public static class Program
 {
-    private const string ShowWhatsNewArgument = "--show-whats-new";
-
     [STAThread]
     public static void Main(string[] args)
     {
-        if (args.Any(arg => string.Equals(arg, ShowWhatsNewArgument, StringComparison.OrdinalIgnoreCase)))
-        {
-            WhatsNewDialogLauncher.Run();
-            return;
-        }
-
         var singleInstanceManager = new SingleInstanceManager("Walk");
         if (!singleInstanceManager.IsPrimaryInstance)
         {
