@@ -109,6 +109,23 @@ function Try-InvokeStep {
 New-Item -ItemType Directory -Force -Path $publishDir | Out-Null
 New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
 
+$generatedReleaseArtifacts = @(
+    "Walk-win-Setup.exe",
+    "Walk-win-Portable.zip",
+    "assets.win.json",
+    "releases.win.json",
+    "RELEASES",
+    "Walk-$Version-full.nupkg",
+    "Walk-$Version-delta.nupkg"
+)
+
+foreach ($artifactName in $generatedReleaseArtifacts) {
+    $artifactPath = Join-Path $releaseDir $artifactName
+    if (Test-Path $artifactPath -PathType Leaf) {
+        Remove-Item $artifactPath -Force
+    }
+}
+
 Invoke-Step "dotnet" @("tool", "restore")
 Invoke-Step "powershell" @("-ExecutionPolicy", "Bypass", "-File", (Join-Path $repoRoot "scripts\Generate-BrandIcons.ps1"))
 Invoke-Step "dotnet" @("test", "$repoRoot\Walk.sln", "-c", $Configuration)
@@ -155,6 +172,10 @@ $packArgs = @(
     "--releaseNotes", $ReleaseNotesPath
 )
 
+if ($configuredSigningModes.Count -eq 0) {
+    $packArgs += "--noInst"
+}
+
 if (-not [string]::IsNullOrWhiteSpace($AzureTrustedSignFile)) {
     $packArgs += @("--azureTrustedSignFile", (Resolve-Path $AzureTrustedSignFile).Path)
 } elseif (-not [string]::IsNullOrWhiteSpace($SignTemplate)) {
@@ -164,11 +185,6 @@ if (-not [string]::IsNullOrWhiteSpace($AzureTrustedSignFile)) {
 }
 
 Invoke-Step "dotnet" $packArgs
-
-if ($configuredSigningModes.Count -eq 0) {
-    Get-ChildItem -Path $releaseDir -Filter "*-Setup.exe" -File -ErrorAction SilentlyContinue |
-        Remove-Item -Force
-}
 
 if ($UploadToGitHub) {
     if (-not $env:GITHUB_TOKEN) {

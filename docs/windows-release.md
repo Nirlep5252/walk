@@ -20,7 +20,7 @@ The release script now supports exactly one Windows signing mode:
 - `VELOPACK_SIGN_PARAMS`
 - `VELOPACK_SIGN_TEMPLATE`
 
-If none of those are configured, tagged releases still publish, but the workflow removes `*-Setup.exe` before upload and ships the portable/update assets only.
+If none of those are configured, tagged releases still publish, but the workflow tells Velopack not to generate the installer at all and ships the portable/update assets only.
 
 #### Recommended: Azure Trusted Signing
 
@@ -88,7 +88,7 @@ That tag triggers [`.github/workflows/release.yml`](../.github/workflows/release
 - publishes the app for `win-x64`
 - signs the Velopack installer assets when signing is configured
 - builds Velopack installer and update packages
-- removes `*-Setup.exe` before upload when signing is not configured
+- skips installer generation when signing is not configured
 - uploads the release assets to the matching GitHub release
 - publishes that GitHub release
 
