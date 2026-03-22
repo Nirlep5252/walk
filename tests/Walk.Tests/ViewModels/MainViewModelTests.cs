@@ -121,6 +121,21 @@ public class MainViewModelTests
         viewModel.Results.Should().HaveCount(12);
     }
 
+    [Fact]
+    public async Task SearchAsync_Toggles_IsSearching_While_Query_Is_In_Flight()
+    {
+        var plugin = new DelayedPlugin(TimeSpan.FromMilliseconds(250));
+        var viewModel = new MainViewModel(new QueryRouter([plugin]));
+
+        viewModel.SearchText = "wait";
+
+        await WaitForAsync(() => viewModel.IsSearching, TimeSpan.FromSeconds(2));
+        viewModel.IsSearching.Should().BeTrue();
+
+        await WaitForAsync(() => !viewModel.IsSearching, TimeSpan.FromSeconds(2));
+        viewModel.IsSearching.Should().BeFalse();
+    }
+
     private static async Task WaitForAsync(Func<bool> condition, TimeSpan timeout)
     {
         var deadline = DateTime.UtcNow + timeout;
@@ -162,6 +177,27 @@ public class MainViewModelTests
                 .ToList();
 
             return Task.FromResult(results);
+        }
+    }
+
+    private sealed class DelayedPlugin(TimeSpan delay) : IQueryPlugin
+    {
+        public string Name => "Delayed";
+        public int Priority => 1;
+
+        public async Task<IReadOnlyList<SearchResult>> QueryAsync(string query, CancellationToken ct)
+        {
+            await Task.Delay(delay, ct);
+            return
+            [
+                new SearchResult
+                {
+                    Title = "Done",
+                    PluginName = "Delayed",
+                    Score = 0.9,
+                    Actions = []
+                }
+            ];
         }
     }
 }

@@ -10,7 +10,7 @@ public sealed class WalkSettings
     public string Theme { get; set; } = "Auto";
     public int CurrencyCacheTtlHours { get; set; } = 6;
     public bool StartWithWindows { get; set; } = true;
-    public int MaxResults { get; set; } = 8;
+    public int MaxResults { get; set; } = 0;
     public bool EnableCalculator { get; set; } = true;
     public bool EnableCurrencyConverter { get; set; } = true;
     public bool EnableSystemCommands { get; set; } = true;

@@ -4,13 +4,15 @@ using System.Text.RegularExpressions;
 using System.Windows.Threading;
 using Walk.Helpers;
 using Walk.Models;
+using Walk.Services;
 
 namespace Walk.Plugins;
 
 public sealed partial class FileSearchPlugin : IQueryPlugin
 {
-    private const int MaxResults = 20;
+    private const int MaxResults = 0;
     private const int MaxCandidateDirectories = 6;
+    private readonly IFileSearchIndex? _searchIndex;
 
     public string Name => "Files";
     public int Priority => 60;
@@ -18,19 +20,31 @@ public sealed partial class FileSearchPlugin : IQueryPlugin
     [GeneratedRegex(@"^[A-Za-z]:\\|^\\\\|^\\[A-Za-z]")]
     private static partial Regex PathPattern();
 
-    public Task<IReadOnlyList<SearchResult>> QueryAsync(string query, CancellationToken ct)
+    public FileSearchPlugin(IFileSearchIndex? searchIndex = null)
+    {
+        _searchIndex = searchIndex;
+    }
+
+    public async Task<IReadOnlyList<SearchResult>> QueryAsync(string query, CancellationToken ct)
     {
         var trimmed = query.Trim();
         if (string.IsNullOrEmpty(trimmed))
-            return Task.FromResult<IReadOnlyList<SearchResult>>([]);
+            return [];
+
+        if (_searchIndex is not null && ShouldUseIndexedSearch(trimmed))
+        {
+            var indexedResults = await _searchIndex.SearchAsync(trimmed, MaxResults, ct).ConfigureAwait(false);
+            if (indexedResults.Count > 0)
+                return CreateIndexedResults(indexedResults, ct);
+        }
 
         var normalizedQuery = NormalizeQuery(trimmed);
         if (!LooksLikePathQuery(trimmed, normalizedQuery))
-            return Task.FromResult<IReadOnlyList<SearchResult>>([]);
+            return [];
 
         var searchContext = ResolveSearchContext(normalizedQuery);
         if (searchContext is null)
-            return Task.FromResult<IReadOnlyList<SearchResult>>([]);
+            return [];
 
         var results = new List<SearchResult>();
         var seenEntries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -46,8 +60,8 @@ public sealed partial class FileSearchPlugin : IQueryPlugin
                         continue;
 
                     results.Add(CreateResult(entry, ct));
-                    if (results.Count >= MaxResults)
-                        return Task.FromResult<IReadOnlyList<SearchResult>>(results);
+                    if (MaxResults > 0 && results.Count >= MaxResults)
+                        return results;
                 }
             }
             catch
@@ -56,10 +70,28 @@ public sealed partial class FileSearchPlugin : IQueryPlugin
             }
         }
 
-        return Task.FromResult<IReadOnlyList<SearchResult>>(results);
+        return results;
     }
 
-    private static SearchResult CreateResult(string entry, CancellationToken ct)
+    private static IReadOnlyList<SearchResult> CreateIndexedResults(
+        IReadOnlyList<FileSearchIndexEntry> entries,
+        CancellationToken ct)
+    {
+        var results = new List<SearchResult>(entries.Count);
+        for (int index = 0; index < entries.Count; index++)
+        {
+            var entry = entries[index];
+            var result = CreateResult(entry.Path, ct);
+            result.Score = entry.Score > 0
+                ? entry.Score
+                : Math.Max(0.58, 0.84 - (index * 0.01));
+            results.Add(result);
+        }
+
+        return results;
+    }
+
+    private static SearchResult CreateResult(string entry, CancellationToken ct, double score = 0.7)
     {
         var isDirectory = Directory.Exists(entry);
         var result = new SearchResult
@@ -67,7 +99,7 @@ public sealed partial class FileSearchPlugin : IQueryPlugin
             Title = GetDisplayName(entry),
             Subtitle = entry,
             PluginName = "Files",
-            Score = 0.7,
+            Score = score,
             IconGlyph = isDirectory ? "\uD83D\uDCC1" : "\uD83D\uDCC4",
             Actions =
             [
@@ -109,6 +141,18 @@ public sealed partial class FileSearchPlugin : IQueryPlugin
         }
 
         return result;
+    }
+
+    private static bool ShouldUseIndexedSearch(string query)
+    {
+        if (query.Length >= 2)
+            return true;
+
+        return query.Contains('*') ||
+               query.Contains('?') ||
+               query.Contains('.') ||
+               query.Contains(Path.DirectorySeparatorChar) ||
+               query.Contains(Path.AltDirectorySeparatorChar);
     }
 
     private static SearchContext? ResolveSearchContext(string normalizedQuery)

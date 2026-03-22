@@ -3,14 +3,15 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Assets\walk-app.ico</ApplicationIcon>
     <StartupObject>Walk.Program</StartupObject>
-    <Version>0.3.12</Version>
-    <FileVersion>0.3.12.0</FileVersion>
+    <Version>0.3.13</Version>
+    <FileVersion>0.3.13.0</FileVersion>
     <InformationalVersion>$(Version)</InformationalVersion>
   </PropertyGroup>
 
@@ -24,6 +25,21 @@
   <ItemGroup>
     <Resource Include="Assets\walk-tray.ico" />
     <Resource Include="Assets\walk-tray-active.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\Everything\Everything.exe">
+      <Link>Everything.exe</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Everything\Everything64.dll">
+      <Link>Everything64.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Everything\License.txt">
+      <Link>Everything.License.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

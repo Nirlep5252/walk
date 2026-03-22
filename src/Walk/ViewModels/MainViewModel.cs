@@ -11,6 +11,7 @@ public partial class MainViewModel : ObservableObject
     private readonly QueryRouter _router;
     private readonly int _maxResults;
     private CancellationTokenSource? _cts;
+    private int _searchVersion;
 
     [ObservableProperty]
     private string _searchText = "";
@@ -20,6 +21,9 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isVisible;
+
+    [ObservableProperty]
+    private bool _isSearching;
 
     public ObservableCollection<SearchResult> Results { get; } = [];
     public ObservableCollection<SearchAction> VisibleActions { get; } = [];
@@ -48,6 +52,7 @@ public partial class MainViewModel : ObservableObject
     private async Task SearchAsync(string query)
     {
         CancelPendingSearch();
+        var searchVersion = Interlocked.Increment(ref _searchVersion);
         _cts = new CancellationTokenSource();
         var token = _cts.Token;
 
@@ -55,6 +60,7 @@ public partial class MainViewModel : ObservableObject
         {
             Results.Clear();
             SelectedIndex = -1;
+            IsSearching = false;
             RefreshSelectionState();
             return;
         }
@@ -68,6 +74,12 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        if (token.IsCancellationRequested)
+            return;
+
+        if (searchVersion == _searchVersion)
+            IsSearching = true;
+
         IReadOnlyList<SearchResult> results;
         try
         {
@@ -76,6 +88,11 @@ public partial class MainViewModel : ObservableObject
         catch (OperationCanceledException)
         {
             return;
+        }
+        finally
+        {
+            if (searchVersion == _searchVersion)
+                IsSearching = false;
         }
 
         if (token.IsCancellationRequested)
@@ -114,9 +131,11 @@ public partial class MainViewModel : ObservableObject
     public void Show()
     {
         CancelPendingSearch();
+        Interlocked.Increment(ref _searchVersion);
         SearchText = "";
         Results.Clear();
         SelectedIndex = -1;
+        IsSearching = false;
         RefreshSelectionState();
         IsVisible = true;
     }
@@ -124,6 +143,8 @@ public partial class MainViewModel : ObservableObject
     public void Hide()
     {
         CancelPendingSearch();
+        Interlocked.Increment(ref _searchVersion);
+        IsSearching = false;
         IsVisible = false;
     }
 

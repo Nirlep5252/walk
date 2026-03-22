@@ -1,6 +1,7 @@
 using System.IO;
 using FluentAssertions;
 using Walk.Plugins;
+using Walk.Services;
 
 namespace Walk.Tests.Plugins;
 
@@ -71,5 +72,37 @@ public class FileSearchPluginTests : IDisposable
         var results = await _plugin.QueryAsync(query, CancellationToken.None);
 
         results.Should().Contain(result => result.Subtitle == notesPath);
+    }
+
+    [Fact]
+    public async Task QueryAsync_Uses_Search_Index_For_Global_Wildcard_Searches()
+    {
+        var pdfPath = Path.Combine(_testDir, "guide.pdf");
+        await File.WriteAllTextAsync(pdfPath, "hello");
+        var plugin = new FileSearchPlugin(new StubFileSearchIndex([new FileSearchIndexEntry(pdfPath, false)]));
+
+        var results = await plugin.QueryAsync("*.pdf", CancellationToken.None);
+
+        results.Should().ContainSingle(result => result.Subtitle == pdfPath);
+    }
+
+    private sealed class StubFileSearchIndex : IFileSearchIndex
+    {
+        private readonly IReadOnlyList<FileSearchIndexEntry> _entries;
+
+        public StubFileSearchIndex(IReadOnlyList<FileSearchIndexEntry> entries)
+        {
+            _entries = entries;
+        }
+
+        public bool IsAvailable => true;
+
+        public Task<IReadOnlyList<FileSearchIndexEntry>> SearchAsync(string query, int maxResults, CancellationToken ct)
+        {
+            var results = maxResults > 0
+                ? _entries.Take(maxResults).ToList()
+                : _entries.ToList();
+            return Task.FromResult<IReadOnlyList<FileSearchIndexEntry>>(results);
+        }
     }
 }

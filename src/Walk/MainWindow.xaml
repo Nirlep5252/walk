@@ -20,6 +20,7 @@
     <ui:FluentWindow.Resources>
         <helpers:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
         <helpers:ZeroCountToVisibilityConverter x:Key="ZeroCountToVisibilityConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
         <!-- Completely naked TextBox: nuke ALL chrome from the ControlTemplate -->
         <Style x:Key="NakedTextBox" TargetType="TextBox">
@@ -135,6 +136,28 @@
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Margin" Value="4,0,0,0" />
         </Style>
+
+        <Storyboard x:Key="SearchDotStoryboard" RepeatBehavior="Forever">
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="SearchDot1" Storyboard.TargetProperty="Opacity">
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0" Value="0.28" />
+                <EasingDoubleKeyFrame KeyTime="0:0:0.16" Value="1" />
+                <EasingDoubleKeyFrame KeyTime="0:0:0.48" Value="0.28" />
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.72" Value="0.28" />
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="SearchDot2" Storyboard.TargetProperty="Opacity">
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0" Value="0.28" />
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.12" Value="0.28" />
+                <EasingDoubleKeyFrame KeyTime="0:0:0.28" Value="1" />
+                <EasingDoubleKeyFrame KeyTime="0:0:0.6" Value="0.28" />
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.72" Value="0.28" />
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="SearchDot3" Storyboard.TargetProperty="Opacity">
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0" Value="0.28" />
+                <DiscreteDoubleKeyFrame KeyTime="0:0:0.24" Value="0.28" />
+                <EasingDoubleKeyFrame KeyTime="0:0:0.4" Value="1" />
+                <EasingDoubleKeyFrame KeyTime="0:0:0.72" Value="0.28" />
+            </DoubleAnimationUsingKeyFrames>
+        </Storyboard>
     </ui:FluentWindow.Resources>
 
     <Grid x:Name="RootGrid" RenderTransformOrigin="0.5,0.5">
@@ -186,6 +209,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
                     <ui:SymbolIcon
@@ -209,6 +233,44 @@
                             Style="{StaticResource NakedTextBox}"
                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
+
+                    <StackPanel
+                        Grid.Column="2"
+                        Margin="16,0,0,0"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding IsSearching, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <StackPanel.Triggers>
+                                <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                    <BeginStoryboard Storyboard="{StaticResource SearchDotStoryboard}" />
+                                </EventTrigger>
+                            </StackPanel.Triggers>
+                            <Border
+                                x:Name="SearchDot1"
+                                Width="5"
+                                Height="5"
+                                Margin="0,0,4,0"
+                                CornerRadius="2.5"
+                                Background="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                Opacity="0.28" />
+                            <Border
+                                x:Name="SearchDot2"
+                                Width="5"
+                                Height="5"
+                                Margin="0,0,4,0"
+                                CornerRadius="2.5"
+                                Background="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                Opacity="0.28" />
+                            <Border
+                                x:Name="SearchDot3"
+                                Width="5"
+                                Height="5"
+                                CornerRadius="2.5"
+                                Background="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                Opacity="0.28" />
+                        </StackPanel>
+                    </StackPanel>
                 </Grid>
 
                 <StackPanel Visibility="{Binding Results.Count, Converter={StaticResource CountToVisibilityConverter}}">

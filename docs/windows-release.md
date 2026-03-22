@@ -86,6 +86,7 @@ That tag triggers [`.github/workflows/release.yml`](../.github/workflows/release
 
 - runs the test suite
 - publishes the app for `win-x64`
+- bundles the shipped `Everything.exe`, `Everything64.dll`, and license alongside Walk for built-in indexed file search
 - signs the Velopack installer assets when signing is configured
 - builds Velopack installer and update packages
 - uploads the release assets to the matching GitHub release
@@ -124,6 +125,8 @@ Local release artifacts are written to:
 
 - `artifacts/publish/win-x64`
 - `artifacts/Releases`
+
+The published app includes the bundled `Everything` runtime used by Walk's file search. End users should not need to install a separate file-search tool.
 
 ## Versioning notes
 

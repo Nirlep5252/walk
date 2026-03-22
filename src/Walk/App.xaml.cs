@@ -26,6 +26,8 @@ public partial class App : System.Windows.Application
     private ChangelogService? _changelogService;
     private SettingsService? _settingsService;
     private RunHistoryService? _runHistoryService;
+    private EverythingBundledRuntime? _everythingRuntime;
+    private EverythingSearchService? _everythingSearchService;
     private QueryRouter? _router;
     private WalkSettings _settings = new();
     private SettingsWindow? _settingsWindow;
@@ -60,11 +62,15 @@ public partial class App : System.Windows.Application
         _changelogService = new ChangelogService(dataDir);
         _updateService = new UpdateService(_changelogService);
         _runHistoryService = new RunHistoryService(dataDir);
+        _everythingRuntime = new EverythingBundledRuntime(dataDir);
+        _everythingSearchService = new EverythingSearchService(_everythingRuntime);
         await _indexService.BuildIndexAsync();
         _indexService.StartWatching();
+        if (_settings.EnableFileSearch)
+            _everythingRuntime.EnsureStarted();
 
         _router = new QueryRouter(BuildPlugins(_settings));
-        var viewModel = new MainViewModel(_router, _settings.MaxResults);
+        var viewModel = new MainViewModel(_router, maxResults: 0);
 
         // Main window
         _mainWindow = new MainWindow(viewModel);
@@ -363,6 +369,8 @@ public partial class App : System.Windows.Application
         }
 
         _settings = updatedSettings;
+        if (_settings.EnableFileSearch)
+            _everythingRuntime?.EnsureStarted();
         _router?.UpdatePlugins(BuildPlugins(_settings));
 
         try
@@ -431,7 +439,7 @@ public partial class App : System.Windows.Application
             plugins.Add(new RunPlugin(_runHistoryService));
 
         if (settings.EnableFileSearch)
-            plugins.Add(new FileSearchPlugin());
+            plugins.Add(new FileSearchPlugin(_everythingSearchService));
 
         plugins.Add(new AppSearchPlugin(_indexService));
         return plugins;
@@ -442,6 +450,8 @@ public partial class App : System.Windows.Application
         _singleInstanceManager?.Dispose();
         _hotkeyService?.Dispose();
         _indexService?.Dispose();
+        _everythingSearchService?.Dispose();
+        _everythingRuntime?.Dispose();
         _updateService?.Dispose();
         if (_trayIcon is not null)
         {

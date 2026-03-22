@@ -316,7 +316,7 @@
                                     Text="File Search" />
                                 <TextBlock
                                     Style="{StaticResource RowDescription}"
-                                    Text="Browse folders and files by typing Windows paths like C:\Windows." />
+                                    Text="Search files instantly with bundled indexed search, wildcards like *.pdf, and Windows paths like C:\Windows." />
                             </StackPanel>
 
                             <ui:ToggleSwitch

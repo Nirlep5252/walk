@@ -30,7 +30,7 @@ public class SettingsServiceTests : IDisposable
         settings.HotkeyKey.Should().Be("Space");
         settings.CurrencyCacheTtlHours.Should().Be(6);
         settings.StartWithWindows.Should().BeTrue();
-        settings.MaxResults.Should().Be(8);
+        settings.MaxResults.Should().Be(0);
         settings.EnableCalculator.Should().BeTrue();
         settings.EnableCurrencyConverter.Should().BeTrue();
         settings.EnableSystemCommands.Should().BeTrue();
