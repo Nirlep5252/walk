@@ -18,5 +18,6 @@ public class EverythingBundledRuntimeTests
         config.Should().Contain("folder_monitor_changes=1,1");
         config.Should().Contain("folder_update_intervals=15,15");
         config.Should().Contain("folder_update_rescan_asap=1");
+        config.Should().Contain("folder_update_rescan_asap=1" + Environment.NewLine + "folders=");
     }
 }

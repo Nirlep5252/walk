@@ -85,19 +85,16 @@ public sealed class EverythingBundledRuntime : IDisposable
 
     public static string BuildConfigContent(IReadOnlyList<string> indexedFolders)
     {
-        var config = new StringBuilder(
-            """
-[Everything]
-app_data=0
-run_as_admin=0
-run_in_background=1
-show_tray_icon=0
-check_for_updates_on_startup=0
-search_history_enabled=0
-run_history_enabled=0
-folder_update_rescan_asap=1
-"""
-                .ReplaceLineEndings(Environment.NewLine));
+        var config = new StringBuilder();
+        config.AppendLine("[Everything]");
+        config.AppendLine("app_data=0");
+        config.AppendLine("run_as_admin=0");
+        config.AppendLine("run_in_background=1");
+        config.AppendLine("show_tray_icon=0");
+        config.AppendLine("check_for_updates_on_startup=0");
+        config.AppendLine("search_history_enabled=0");
+        config.AppendLine("run_history_enabled=0");
+        config.AppendLine("folder_update_rescan_asap=1");
 
         if (indexedFolders.Count > 0)
         {
