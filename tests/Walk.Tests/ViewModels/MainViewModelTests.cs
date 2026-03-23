@@ -122,6 +122,20 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public async Task SearchAsync_Respects_Configured_MaxResults()
+    {
+        var plugin = new BulkResultPlugin(120);
+        var viewModel = new MainViewModel(new QueryRouter([plugin]), maxResults: 80);
+
+        viewModel.SearchText = "bulk";
+        await WaitForAsync(
+            () => viewModel.Results.Count == 80,
+            TimeSpan.FromSeconds(2));
+
+        viewModel.Results.Should().HaveCount(80);
+    }
+
+    [Fact]
     public async Task SearchAsync_Toggles_IsSearching_While_Query_Is_In_Flight()
     {
         var plugin = new DelayedPlugin(TimeSpan.FromMilliseconds(250));
@@ -134,6 +148,22 @@ public class MainViewModelTests
 
         await WaitForAsync(() => !viewModel.IsSearching, TimeSpan.FromSeconds(2));
         viewModel.IsSearching.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SearchAsync_Shows_Fast_Results_Before_Slower_Ones_Finish()
+    {
+        var fastPlugin = new NamedDelayPlugin("App", 0.8, TimeSpan.FromMilliseconds(20));
+        var slowPlugin = new NamedDelayPlugin("File", 0.6, TimeSpan.FromMilliseconds(250));
+        var viewModel = new MainViewModel(new QueryRouter([fastPlugin, slowPlugin]));
+
+        viewModel.SearchText = "note";
+
+        await WaitForAsync(() => viewModel.Results.Count == 1, TimeSpan.FromSeconds(2));
+        viewModel.Results.Select(result => result.Title).Should().ContainSingle().Which.Should().Be("App");
+
+        await WaitForAsync(() => viewModel.Results.Count == 2, TimeSpan.FromSeconds(2));
+        viewModel.Results.Select(result => result.Title).Should().ContainInOrder("App", "File");
     }
 
     private static async Task WaitForAsync(Func<bool> condition, TimeSpan timeout)
@@ -195,6 +225,27 @@ public class MainViewModelTests
                     Title = "Done",
                     PluginName = "Delayed",
                     Score = 0.9,
+                    Actions = []
+                }
+            ];
+        }
+    }
+
+    private sealed class NamedDelayPlugin(string title, double score, TimeSpan delay) : IQueryPlugin
+    {
+        public string Name => title;
+        public int Priority => 1;
+
+        public async Task<IReadOnlyList<SearchResult>> QueryAsync(string query, CancellationToken ct)
+        {
+            await Task.Delay(delay, ct);
+            return
+            [
+                new SearchResult
+                {
+                    Title = title,
+                    PluginName = title,
+                    Score = score,
                     Actions = []
                 }
             ];

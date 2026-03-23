@@ -137,4 +137,132 @@ public class QueryRouterTests
         results[0].Title.Should().Be("SecondResult");
         await firstPlugin.DidNotReceive().QueryAsync("test", Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task RouteIncrementalAsync_Publishes_Results_As_Each_Plugin_Completes()
+    {
+        var fastPlugin = Substitute.For<IQueryPlugin>();
+        fastPlugin.Name.Returns("Fast");
+        fastPlugin.Priority.Returns(2);
+        fastPlugin.QueryAsync("test", Arg.Any<CancellationToken>())
+            .Returns(async _ =>
+            {
+                await Task.Delay(20);
+                return [new SearchResult { Title = "FastResult", Score = 0.6, Actions = [] }];
+            });
+
+        var slowPlugin = Substitute.For<IQueryPlugin>();
+        slowPlugin.Name.Returns("Slow");
+        slowPlugin.Priority.Returns(1);
+        slowPlugin.QueryAsync("test", Arg.Any<CancellationToken>())
+            .Returns(async _ =>
+            {
+                await Task.Delay(200);
+                return [new SearchResult { Title = "SlowResult", Score = 0.9, Actions = [] }];
+            });
+
+        var router = new QueryRouter([fastPlugin, slowPlugin]);
+        var snapshots = new List<IReadOnlyList<SearchResult>>();
+
+        await router.RouteIncrementalAsync(
+            "test",
+            results =>
+            {
+                snapshots.Add(results.ToList());
+                return Task.CompletedTask;
+            },
+            CancellationToken.None);
+
+        snapshots.Should().HaveCount(2);
+        snapshots[0].Should().ContainSingle(result => result.Title == "FastResult");
+        snapshots[1].Select(result => result.Title).Should().ContainInOrder("SlowResult", "FastResult");
+    }
+
+    [Fact]
+    public async Task RouteIncrementalAsync_Replaces_Previous_Snapshot_For_Incremental_Plugin()
+    {
+        var plugin = new IncrementalPlugin();
+        var router = new QueryRouter([plugin]);
+        var snapshots = new List<IReadOnlyList<SearchResult>>();
+
+        await router.RouteIncrementalAsync(
+            "test",
+            results =>
+            {
+                snapshots.Add(results.ToList());
+                return Task.CompletedTask;
+            },
+            CancellationToken.None);
+
+        snapshots.Should().HaveCount(2);
+        snapshots[0].Select(result => result.Title).Should().ContainSingle().Which.Should().Be("One");
+        snapshots[1].Select(result => result.Title).Should().ContainInOrder("Two", "One");
+    }
+
+    [Fact]
+    public async Task RouteIncrementalAsync_Does_Not_Block_Caller_For_Synchronous_Incremental_Plugins()
+    {
+        var plugin = new BlockingIncrementalPlugin();
+        var router = new QueryRouter([plugin]);
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        var routeTask = router.RouteIncrementalAsync("test", _ => Task.CompletedTask, CancellationToken.None);
+
+        stopwatch.ElapsedMilliseconds.Should().BeLessThan(100);
+        await routeTask;
+    }
+
+    private sealed class IncrementalPlugin : IIncrementalQueryPlugin
+    {
+        public string Name => "Incremental";
+        public int Priority => 1;
+
+        public Task<IReadOnlyList<SearchResult>> QueryAsync(string query, CancellationToken ct)
+        {
+            return Task.FromResult<IReadOnlyList<SearchResult>>(
+            [
+                new SearchResult { Title = "Two", Score = 0.8, PluginName = Name, Actions = [] },
+                new SearchResult { Title = "One", Score = 0.6, PluginName = Name, Actions = [] }
+            ]);
+        }
+
+        public async Task QueryIncrementalAsync(
+            string query,
+            Func<IReadOnlyList<SearchResult>, Task> onResultsAvailable,
+            CancellationToken ct)
+        {
+            await onResultsAvailable(
+            [
+                new SearchResult { Title = "One", Score = 0.6, PluginName = Name, Actions = [] }
+            ]);
+
+            await onResultsAvailable(
+            [
+                new SearchResult { Title = "Two", Score = 0.8, PluginName = Name, Actions = [] }
+            ]);
+        }
+    }
+
+    private sealed class BlockingIncrementalPlugin : IIncrementalQueryPlugin
+    {
+        public string Name => "BlockingIncremental";
+        public int Priority => 1;
+
+        public Task<IReadOnlyList<SearchResult>> QueryAsync(string query, CancellationToken ct)
+        {
+            return Task.FromResult<IReadOnlyList<SearchResult>>([]);
+        }
+
+        public async Task QueryIncrementalAsync(
+            string query,
+            Func<IReadOnlyList<SearchResult>, Task> onResultsAvailable,
+            CancellationToken ct)
+        {
+            Thread.Sleep(200);
+            await onResultsAvailable(
+            [
+                new SearchResult { Title = "Done", Score = 0.5, PluginName = Name, Actions = [] }
+            ]);
+        }
+    }
 }

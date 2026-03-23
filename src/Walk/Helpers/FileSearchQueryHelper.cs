@@ -9,10 +9,15 @@ public static class FileSearchQueryHelper
     public static bool ShouldUseFuzzySearch(string query)
     {
         var normalized = NormalizeForFuzzy(query);
-        if (normalized.Length < 3)
+        if (normalized.Length < 5)
             return false;
 
-        return !ContainsExplicitSearchSyntax(query);
+        return !HasExplicitSearchSyntax(query);
+    }
+
+    public static bool HasExplicitSearchSyntax(string query)
+    {
+        return ContainsExplicitSearchSyntax(query);
     }
 
     public static string BuildRegexPattern(string query)

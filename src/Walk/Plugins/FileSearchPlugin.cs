@@ -1,17 +1,17 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
-using System.Windows.Threading;
 using Walk.Helpers;
 using Walk.Models;
 using Walk.Services;
 
 namespace Walk.Plugins;
 
-public sealed partial class FileSearchPlugin : IQueryPlugin
+public sealed partial class FileSearchPlugin : IIncrementalQueryPlugin
 {
     private const int MaxResults = 0;
     private const int MaxCandidateDirectories = 6;
+    private const int PublishBatchSize = 16;
     private readonly IFileSearchIndex? _searchIndex;
 
     public string Name => "Files";
@@ -27,26 +27,55 @@ public sealed partial class FileSearchPlugin : IQueryPlugin
 
     public async Task<IReadOnlyList<SearchResult>> QueryAsync(string query, CancellationToken ct)
     {
+        var results = new List<SearchResult>();
+        await QueryIncrementalAsync(
+            query,
+            batch =>
+            {
+                results.AddRange(batch);
+                return Task.CompletedTask;
+            },
+            ct).ConfigureAwait(false);
+        return results;
+    }
+
+    public async Task QueryIncrementalAsync(
+        string query,
+        Func<IReadOnlyList<SearchResult>, Task> onResultsAvailable,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(onResultsAvailable);
+
         var trimmed = query.Trim();
         if (string.IsNullOrEmpty(trimmed))
-            return [];
+            return;
 
         if (_searchIndex is not null && ShouldUseIndexedSearch(trimmed))
         {
-            var indexedResults = await _searchIndex.SearchAsync(trimmed, MaxResults, ct).ConfigureAwait(false);
-            if (indexedResults.Count > 0)
-                return CreateIndexedResults(indexedResults, ct);
+            await _searchIndex.SearchIncrementalAsync(
+                trimmed,
+                MaxResults,
+                entries =>
+                {
+                    var batch = CreateIndexedResults(entries, ct);
+                    return batch.Count == 0
+                        ? Task.CompletedTask
+                        : onResultsAvailable(batch);
+                },
+                ct).ConfigureAwait(false);
+            return;
         }
 
         var normalizedQuery = NormalizeQuery(trimmed);
         if (!LooksLikePathQuery(trimmed, normalizedQuery))
-            return [];
+            return;
 
         var searchContext = ResolveSearchContext(normalizedQuery);
         if (searchContext is null)
-            return [];
+            return;
 
         var results = new List<SearchResult>();
+        var pendingBatch = new List<SearchResult>(PublishBatchSize);
         var seenEntries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var directory in searchContext.Directories)
@@ -59,9 +88,17 @@ public sealed partial class FileSearchPlugin : IQueryPlugin
                     if (!seenEntries.Add(entry))
                         continue;
 
-                    results.Add(CreateResult(entry, ct));
+                    var result = CreateResult(entry);
+                    results.Add(result);
+                    pendingBatch.Add(result);
+                    if (pendingBatch.Count >= PublishBatchSize)
+                    {
+                        await onResultsAvailable(pendingBatch.ToList()).ConfigureAwait(false);
+                        pendingBatch.Clear();
+                    }
+
                     if (MaxResults > 0 && results.Count >= MaxResults)
-                        return results;
+                        return;
                 }
             }
             catch
@@ -70,7 +107,8 @@ public sealed partial class FileSearchPlugin : IQueryPlugin
             }
         }
 
-        return results;
+        if (pendingBatch.Count > 0)
+            await onResultsAvailable(pendingBatch.ToList()).ConfigureAwait(false);
     }
 
     private static IReadOnlyList<SearchResult> CreateIndexedResults(
@@ -81,7 +119,7 @@ public sealed partial class FileSearchPlugin : IQueryPlugin
         for (int index = 0; index < entries.Count; index++)
         {
             var entry = entries[index];
-            var result = CreateResult(entry.Path, ct);
+            var result = CreateResult(entry.Path);
             result.Score = entry.Score > 0
                 ? entry.Score
                 : Math.Max(0.58, 0.84 - (index * 0.01));
@@ -91,10 +129,10 @@ public sealed partial class FileSearchPlugin : IQueryPlugin
         return results;
     }
 
-    private static SearchResult CreateResult(string entry, CancellationToken ct, double score = 0.7)
+    private static SearchResult CreateResult(string entry, double score = 0.7)
     {
         var isDirectory = Directory.Exists(entry);
-        var result = new SearchResult
+        return new SearchResult
         {
             Title = GetDisplayName(entry),
             Subtitle = entry,
@@ -127,32 +165,16 @@ public sealed partial class FileSearchPlugin : IQueryPlugin
                 }
             ]
         };
-
-        if (!isDirectory)
-        {
-            if (IconExtractor.TryGetCachedIcon(entry, 0, out var cachedIcon))
-            {
-                result.Icon = cachedIcon;
-            }
-            else
-            {
-                _ = PopulateIconAsync(result, entry, ct);
-            }
-        }
-
-        return result;
     }
 
     private static bool ShouldUseIndexedSearch(string query)
     {
-        if (query.Length >= 2)
-            return true;
-
         return query.Contains('*') ||
                query.Contains('?') ||
                query.Contains('.') ||
                query.Contains(Path.DirectorySeparatorChar) ||
-               query.Contains(Path.AltDirectorySeparatorChar);
+               query.Contains(Path.AltDirectorySeparatorChar) ||
+               FileSearchQueryHelper.ShouldUseFuzzySearch(query);
     }
 
     private static SearchContext? ResolveSearchContext(string normalizedQuery)
@@ -293,38 +315,6 @@ public sealed partial class FileSearchPlugin : IQueryPlugin
     {
         var name = Path.GetFileName(entry.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         return string.IsNullOrWhiteSpace(name) ? entry : name;
-    }
-
-    private static async Task PopulateIconAsync(SearchResult result, string path, CancellationToken ct)
-    {
-        try
-        {
-            var icon = await IconExtractor.GetIconAsync(path, 0, ct).ConfigureAwait(false);
-            if (icon is null || ct.IsCancellationRequested)
-                return;
-
-            var dispatcher = System.Windows.Application.Current?.Dispatcher;
-            if (dispatcher is null)
-            {
-                result.Icon = icon;
-                return;
-            }
-
-            await dispatcher.InvokeAsync(
-                () =>
-                {
-                    if (!ct.IsCancellationRequested)
-                        result.Icon = icon;
-                },
-                DispatcherPriority.Background,
-                ct);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch
-        {
-        }
     }
 
     private sealed record SearchContext(IReadOnlyList<string> Directories, string Filter);

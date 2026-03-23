@@ -11,6 +11,12 @@ public class FileSearchQueryHelperTests
         FileSearchQueryHelper.ShouldUseFuzzySearch("smthng").Should().BeTrue();
     }
 
+    [Fact]
+    public void ShouldUseFuzzySearch_Returns_False_For_Short_Plain_Text_Query()
+    {
+        FileSearchQueryHelper.ShouldUseFuzzySearch("stea").Should().BeFalse();
+    }
+
     [Theory]
     [InlineData("*.mp4")]
     [InlineData(@"C:\Windows")]

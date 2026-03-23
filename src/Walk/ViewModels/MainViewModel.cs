@@ -78,12 +78,17 @@ public partial class MainViewModel : ObservableObject
             return;
 
         if (searchVersion == _searchVersion)
+        {
+            ApplyResults([]);
             IsSearching = true;
+        }
 
-        IReadOnlyList<SearchResult> results;
         try
         {
-            results = await _router.RouteAsync(query, token);
+            await _router.RouteIncrementalAsync(
+                query,
+                results => ApplyResultsAsync(searchVersion, results, token),
+                token);
         }
         catch (OperationCanceledException)
         {
@@ -94,26 +99,6 @@ public partial class MainViewModel : ObservableObject
             if (searchVersion == _searchVersion)
                 IsSearching = false;
         }
-
-        if (token.IsCancellationRequested)
-            return;
-
-        // Update collection in-place to minimize UI layout passes
-        var newResults = _maxResults > 0
-            ? results.Take(_maxResults).ToList()
-            : results.ToList();
-        for (int i = 0; i < newResults.Count; i++)
-        {
-            if (i < Results.Count)
-                Results[i] = newResults[i];
-            else
-                Results.Add(newResults[i]);
-        }
-        while (Results.Count > newResults.Count)
-            Results.RemoveAt(Results.Count - 1);
-
-        SelectedIndex = Results.Count > 0 ? 0 : -1;
-        RefreshSelectionState();
     }
 
     [RelayCommand]
@@ -214,5 +199,60 @@ public partial class MainViewModel : ObservableObject
         {
             return false;
         }
+    }
+
+    private Task ApplyResultsAsync(
+        int searchVersion,
+        IReadOnlyList<SearchResult> results,
+        CancellationToken token)
+    {
+        if (token.IsCancellationRequested || searchVersion != _searchVersion)
+            return Task.CompletedTask;
+
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess())
+        {
+            ApplyResults(results);
+            return Task.CompletedTask;
+        }
+
+        return dispatcher.InvokeAsync(
+            () =>
+            {
+                if (!token.IsCancellationRequested && searchVersion == _searchVersion)
+                    ApplyResults(results);
+            }).Task;
+    }
+
+    private void ApplyResults(IReadOnlyList<SearchResult> results)
+    {
+        var newResults = _maxResults > 0
+            ? results.Take(_maxResults).ToList()
+            : results.ToList();
+
+        for (int i = 0; i < newResults.Count; i++)
+        {
+            if (i < Results.Count)
+            {
+                if (!ReferenceEquals(Results[i], newResults[i]))
+                    Results[i] = newResults[i];
+            }
+            else
+                Results.Add(newResults[i]);
+        }
+
+        while (Results.Count > newResults.Count)
+            Results.RemoveAt(Results.Count - 1);
+
+        if (Results.Count == 0)
+        {
+            SelectedIndex = -1;
+        }
+        else if (SelectedIndex < 0 || SelectedIndex >= Results.Count)
+        {
+            SelectedIndex = 0;
+        }
+
+        RefreshSelectionState();
     }
 }

@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using Walk.Models;
 using Walk.Plugins;
 
@@ -39,6 +40,64 @@ public sealed class QueryRouter
             .ToList();
     }
 
+    public async Task RouteIncrementalAsync(
+        string query,
+        Func<IReadOnlyList<SearchResult>, Task> onResultsAvailable,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(onResultsAvailable);
+
+        var trimmedQuery = query.Trim();
+        if (trimmedQuery.Length == 0 || ct.IsCancellationRequested)
+            return;
+
+        var plugins = _plugins;
+        if (plugins.Count == 0)
+            return;
+
+        var updates = Channel.CreateUnbounded<PluginResultsUpdate>();
+        var resultsByPlugin = new Dictionary<IQueryPlugin, List<SearchResult>>();
+        var remainingPlugins = plugins.Count;
+
+        var pluginTasks = plugins
+            .Select(plugin => PublishPluginResultsAsync(plugin, trimmedQuery, updates.Writer, ct, () =>
+            {
+                if (Interlocked.Decrement(ref remainingPlugins) == 0)
+                    updates.Writer.TryComplete();
+            }))
+            .ToArray();
+
+        await foreach (var update in updates.Reader.ReadAllAsync(ct).ConfigureAwait(false))
+        {
+            if (ct.IsCancellationRequested)
+                break;
+
+            if (update.Append)
+            {
+                if (!resultsByPlugin.TryGetValue(update.Plugin, out var existingResults))
+                {
+                    existingResults = [];
+                    resultsByPlugin[update.Plugin] = existingResults;
+                }
+
+                existingResults.AddRange(update.Results);
+            }
+            else
+            {
+                resultsByPlugin[update.Plugin] = update.Results.ToList();
+            }
+
+            var orderedResults = resultsByPlugin.Values
+                .SelectMany(result => result)
+                .OrderByDescending(result => result.Score)
+                .ToList();
+
+            await onResultsAvailable(orderedResults).ConfigureAwait(false);
+        }
+
+        await Task.WhenAll(pluginTasks).ConfigureAwait(false);
+    }
+
     private static async Task<IReadOnlyList<SearchResult>> SafeQueryAsync(
         IQueryPlugin plugin, string query, CancellationToken ct)
     {
@@ -56,8 +115,47 @@ public sealed class QueryRouter
         }
     }
 
+    private static async Task PublishPluginResultsAsync(
+        IQueryPlugin plugin,
+        string query,
+        ChannelWriter<PluginResultsUpdate> writer,
+        CancellationToken ct,
+        Action onCompleted)
+    {
+        try
+        {
+            if (plugin is IIncrementalQueryPlugin incrementalPlugin)
+            {
+                await Task.Run(
+                    () => incrementalPlugin.QueryIncrementalAsync(
+                        query,
+                        async results =>
+                        {
+                            if (!ct.IsCancellationRequested)
+                                await writer.WriteAsync(new PluginResultsUpdate(plugin, results, Append: true), ct).ConfigureAwait(false);
+                        },
+                        ct),
+                    ct).ConfigureAwait(false);
+                return;
+            }
+
+            var results = await SafeQueryAsync(plugin, query, ct).ConfigureAwait(false);
+            if (!ct.IsCancellationRequested)
+                await writer.WriteAsync(new PluginResultsUpdate(plugin, results, Append: false), ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            onCompleted();
+        }
+    }
+
     private static IReadOnlyList<IQueryPlugin> OrderPlugins(IEnumerable<IQueryPlugin> plugins)
     {
         return plugins.OrderByDescending(p => p.Priority).ToList();
     }
+
+    private sealed record PluginResultsUpdate(IQueryPlugin Plugin, IReadOnlyList<SearchResult> Results, bool Append);
 }

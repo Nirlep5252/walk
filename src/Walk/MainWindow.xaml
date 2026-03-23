@@ -285,7 +285,10 @@
                         Margin="4,4,4,4"
                         BorderThickness="0"
                         Background="Transparent"
+                        ScrollViewer.CanContentScroll="True"
                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        VirtualizingPanel.IsVirtualizing="True"
+                        VirtualizingPanel.VirtualizationMode="Recycling"
                         ItemContainerStyle="{StaticResource ResultItemStyle}"
                         FocusVisualStyle="{x:Null}">
 
