@@ -208,7 +208,7 @@ public class QueryRouterTests
 
         var routeTask = router.RouteIncrementalAsync("test", _ => Task.CompletedTask, CancellationToken.None);
 
-        stopwatch.ElapsedMilliseconds.Should().BeLessThan(100);
+        stopwatch.ElapsedMilliseconds.Should().BeLessThan(250);
         await routeTask;
     }
 

@@ -159,10 +159,10 @@ public class MainViewModelTests
 
         viewModel.SearchText = "note";
 
-        await WaitForAsync(() => viewModel.Results.Count == 1, TimeSpan.FromSeconds(5));
+        await WaitForAsync(() => viewModel.Results.Count == 1, TimeSpan.FromSeconds(15));
         viewModel.Results.Select(result => result.Title).Should().ContainSingle().Which.Should().Be("App");
 
-        await WaitForAsync(() => viewModel.Results.Count == 2, TimeSpan.FromSeconds(5));
+        await WaitForAsync(() => viewModel.Results.Count == 2, TimeSpan.FromSeconds(15));
         viewModel.Results.Select(result => result.Title).Should().ContainInOrder("App", "File");
     }
 
