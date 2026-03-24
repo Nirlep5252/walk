@@ -146,6 +146,19 @@ public class FileSearchPluginTests : IDisposable
         index.SearchIncrementalCallCount.Should().Be(0);
     }
 
+    [Fact]
+    public async Task QueryAsync_Does_Not_Create_Previews_For_NonPreviewable_File_Types()
+    {
+        var textPath = Path.Combine(_testDir, "steam-log.txt");
+        await File.WriteAllTextAsync(textPath, "hello");
+        var plugin = new FileSearchPlugin(new StubFileSearchIndex([new FileSearchIndexEntry(textPath, false)]));
+
+        var results = await plugin.QueryAsync("steam", CancellationToken.None);
+
+        results.Should().ContainSingle();
+        results[0].Preview.Should().BeNull();
+    }
+
     private sealed class StubFileSearchIndex : IFileSearchIndex
     {
         private readonly IReadOnlyList<FileSearchIndexEntry> _entries;

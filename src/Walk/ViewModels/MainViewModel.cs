@@ -8,6 +8,7 @@ namespace Walk.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
+    private const int GridColumnCount = 3;
     private readonly QueryRouter _router;
     private readonly int _maxResults;
     private CancellationTokenSource? _cts;
@@ -25,8 +26,14 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isSearching;
 
+    [ObservableProperty]
+    private ResultsViewMode _resultsViewMode = ResultsViewMode.List;
+
     public ObservableCollection<SearchResult> Results { get; } = [];
+    public ObservableCollection<GridResultRowViewModel> GridRows { get; } = [];
     public ObservableCollection<SearchAction> VisibleActions { get; } = [];
+    public bool IsListView => ResultsViewMode == ResultsViewMode.List;
+    public bool IsGridView => ResultsViewMode == ResultsViewMode.Grid;
 
     public SearchResult? SelectedResult =>
         SelectedIndex >= 0 && SelectedIndex < Results.Count
@@ -41,12 +48,20 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedIndexChanged(int value)
     {
+        RefreshGridSelectionState();
         RefreshSelectionState();
     }
 
     partial void OnSearchTextChanged(string value)
     {
         _ = SearchAsync(value);
+    }
+
+    partial void OnResultsViewModeChanged(ResultsViewMode value)
+    {
+        OnPropertyChanged(nameof(IsListView));
+        OnPropertyChanged(nameof(IsGridView));
+        EnsureSelectionInVisibleRange();
     }
 
     private async Task SearchAsync(string query)
@@ -59,6 +74,7 @@ public partial class MainViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(query))
         {
             Results.Clear();
+            GridRows.Clear();
             SelectedIndex = -1;
             IsSearching = false;
             RefreshSelectionState();
@@ -113,12 +129,40 @@ public partial class MainViewModel : ObservableObject
         TryExecuteSelectedAction(action => action.Label.Contains("Admin", StringComparison.OrdinalIgnoreCase));
     }
 
+    [RelayCommand]
+    private void SetListView()
+    {
+        ResultsViewMode = ResultsViewMode.List;
+    }
+
+    [RelayCommand]
+    private void SetGridView()
+    {
+        ResultsViewMode = ResultsViewMode.Grid;
+    }
+
+    [RelayCommand]
+    private void ToggleResultsView()
+    {
+        ResultsViewMode = ResultsViewMode == ResultsViewMode.List
+            ? ResultsViewMode.Grid
+            : ResultsViewMode.List;
+    }
+
+    [RelayCommand]
+    private void SelectGridResult(int index)
+    {
+        if (index >= 0 && index < Results.Count)
+            SelectedIndex = index;
+    }
+
     public void Show()
     {
         CancelPendingSearch();
         Interlocked.Increment(ref _searchVersion);
         SearchText = "";
         Results.Clear();
+        GridRows.Clear();
         SelectedIndex = -1;
         IsSearching = false;
         RefreshSelectionState();
@@ -166,6 +210,20 @@ public partial class MainViewModel : ObservableObject
             Hide();
 
         return true;
+    }
+
+    public void MoveSelection(int offset)
+    {
+        if (Results.Count == 0 || offset == 0)
+            return;
+
+        var targetIndex = SelectedIndex;
+        if (targetIndex < 0)
+            targetIndex = 0;
+        else
+            targetIndex += offset;
+
+        SelectedIndex = Math.Clamp(targetIndex, 0, Results.Count - 1);
     }
 
     private void RefreshSelectionState()
@@ -238,11 +296,15 @@ public partial class MainViewModel : ObservableObject
                     Results[i] = newResults[i];
             }
             else
+            {
                 Results.Add(newResults[i]);
+            }
         }
 
         while (Results.Count > newResults.Count)
             Results.RemoveAt(Results.Count - 1);
+
+        SyncGridRows(newResults);
 
         if (Results.Count == 0)
         {
@@ -254,5 +316,69 @@ public partial class MainViewModel : ObservableObject
         }
 
         RefreshSelectionState();
+    }
+
+    private void SyncGridRows(IReadOnlyList<SearchResult> sourceResults)
+    {
+        var rowCount = (sourceResults.Count + GridColumnCount - 1) / GridColumnCount;
+
+        while (GridRows.Count < rowCount)
+            GridRows.Add(new GridResultRowViewModel());
+
+        while (GridRows.Count > rowCount)
+            GridRows.RemoveAt(GridRows.Count - 1);
+
+        for (int rowIndex = 0; rowIndex < rowCount; rowIndex++)
+        {
+            var row = GridRows[rowIndex];
+            var startIndex = rowIndex * GridColumnCount;
+            var rowItems = sourceResults
+                .Skip(startIndex)
+                .Take(GridColumnCount)
+                .Select((result, offset) => new GridResultItemViewModel(result, startIndex + offset))
+                .ToList();
+
+            for (int itemIndex = 0; itemIndex < rowItems.Count; itemIndex++)
+            {
+                if (itemIndex < row.Items.Count)
+                {
+                    if (!ReferenceEquals(row.Items[itemIndex].Result, rowItems[itemIndex].Result) ||
+                        row.Items[itemIndex].Index != rowItems[itemIndex].Index)
+                    {
+                        row.Items[itemIndex] = rowItems[itemIndex];
+                    }
+                }
+                else
+                {
+                    row.Items.Add(rowItems[itemIndex]);
+                }
+            }
+
+            while (row.Items.Count > rowItems.Count)
+                row.Items.RemoveAt(row.Items.Count - 1);
+        }
+
+        RefreshGridSelectionState();
+    }
+
+    private void EnsureSelectionInVisibleRange()
+    {
+        if (Results.Count == 0)
+        {
+            SelectedIndex = -1;
+            return;
+        }
+
+        if (SelectedIndex >= Results.Count)
+            SelectedIndex = Results.Count - 1;
+    }
+
+    private void RefreshGridSelectionState()
+    {
+        foreach (var row in GridRows)
+        {
+            foreach (var item in row.Items)
+                item.IsSelected = item.Index == SelectedIndex;
+        }
     }
 }

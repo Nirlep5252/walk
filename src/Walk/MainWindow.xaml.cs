@@ -22,6 +22,13 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     protected override void OnPreviewKeyDown(System.Windows.Input.KeyEventArgs e)
     {
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.G)
+        {
+            _viewModel.ToggleResultsViewCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
         var gesture = GetGestureText(e);
         if (gesture is not null && _viewModel.TryExecuteSelectedAction(gesture))
         {
@@ -31,20 +38,28 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         switch (e.Key)
         {
+            case Key.Left when _viewModel.IsGridView:
+                _viewModel.MoveSelection(-1);
+                e.Handled = true;
+                break;
+
+            case Key.Right when _viewModel.IsGridView:
+                _viewModel.MoveSelection(1);
+                e.Handled = true;
+                break;
+
             case Key.Escape:
                 _viewModel.Hide();
                 e.Handled = true;
                 break;
 
             case Key.Down:
-                if (_viewModel.SelectedIndex < _viewModel.Results.Count - 1)
-                    _viewModel.SelectedIndex++;
+                _viewModel.MoveSelection(_viewModel.IsGridView ? GetGridColumnCount() : 1);
                 e.Handled = true;
                 break;
 
             case Key.Up:
-                if (_viewModel.SelectedIndex > 0)
-                    _viewModel.SelectedIndex--;
+                _viewModel.MoveSelection(_viewModel.IsGridView ? -GetGridColumnCount() : -1);
                 e.Handled = true;
                 break;
         }
@@ -74,6 +89,17 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             return $"Ctrl+{key.ToString().ToUpperInvariant()}";
 
         return null;
+    }
+
+    private int GetGridColumnCount()
+    {
+        return 3;
+    }
+
+    private void GridCard_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: GridResultItemViewModel item })
+            _ = item.Result.EnsurePreviewAsync();
     }
 
     public void ShowLauncher()

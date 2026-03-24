@@ -13,6 +13,26 @@ public sealed partial class FileSearchPlugin : IIncrementalQueryPlugin
     private const int MaxCandidateDirectories = 6;
     private const int PublishBatchSize = 16;
     private readonly IFileSearchIndex? _searchIndex;
+    private static readonly HashSet<string> PreviewableExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".avif",
+        ".bmp",
+        ".gif",
+        ".heic",
+        ".jpeg",
+        ".jpg",
+        ".m4v",
+        ".mkv",
+        ".mov",
+        ".mp4",
+        ".pdf",
+        ".png",
+        ".tif",
+        ".tiff",
+        ".webm",
+        ".webp",
+        ".wmv",
+    };
 
     public string Name => "Files";
     public int Priority => 60;
@@ -57,7 +77,7 @@ public sealed partial class FileSearchPlugin : IIncrementalQueryPlugin
                 MaxResults,
                 entries =>
                 {
-                    var batch = CreateIndexedResults(entries, ct);
+                    var batch = CreateIndexedResults(entries);
                     return batch.Count == 0
                         ? Task.CompletedTask
                         : onResultsAvailable(batch);
@@ -111,9 +131,7 @@ public sealed partial class FileSearchPlugin : IIncrementalQueryPlugin
             await onResultsAvailable(pendingBatch.ToList()).ConfigureAwait(false);
     }
 
-    private static IReadOnlyList<SearchResult> CreateIndexedResults(
-        IReadOnlyList<FileSearchIndexEntry> entries,
-        CancellationToken ct)
+    private static IReadOnlyList<SearchResult> CreateIndexedResults(IReadOnlyList<FileSearchIndexEntry> entries)
     {
         var results = new List<SearchResult>(entries.Count);
         for (int index = 0; index < entries.Count; index++)
@@ -132,7 +150,7 @@ public sealed partial class FileSearchPlugin : IIncrementalQueryPlugin
     private static SearchResult CreateResult(string entry, double score = 0.7)
     {
         var isDirectory = Directory.Exists(entry);
-        return new SearchResult
+        var result = new SearchResult
         {
             Title = GetDisplayName(entry),
             Subtitle = entry,
@@ -165,6 +183,17 @@ public sealed partial class FileSearchPlugin : IIncrementalQueryPlugin
                 }
             ]
         };
+
+        if (!isDirectory && ShouldLoadThumbnail(entry))
+            result.SetPreviewLoader(loaderCt => IconExtractor.GetThumbnailAsync(entry, loaderCt));
+
+        return result;
+    }
+
+    private static bool ShouldLoadThumbnail(string filePath)
+    {
+        var extension = Path.GetExtension(filePath);
+        return !string.IsNullOrWhiteSpace(extension) && PreviewableExtensions.Contains(extension);
     }
 
     private static bool ShouldUseIndexedSearch(string query)

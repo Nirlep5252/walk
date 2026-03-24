@@ -5,7 +5,7 @@
     xmlns:helpers="clr-namespace:Walk.Helpers"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="Walk"
-    Width="680"
+    Width="700"
     MinHeight="56"
     MaxHeight="580"
     SizeToContent="Height"
@@ -136,6 +136,42 @@
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Margin" Value="4,0,0,0" />
         </Style>
+        <Style x:Key="ViewToggleButton" TargetType="ToggleButton">
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="#14FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border
+                            x:Name="Chrome"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="8">
+                            <ContentPresenter
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#10FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                <Setter TargetName="Chrome" Property="Background" Value="#18FFFFFF" />
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#22FFFFFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <Storyboard x:Key="SearchDotStoryboard" RepeatBehavior="Forever">
             <DoubleAnimationUsingKeyFrames Storyboard.TargetName="SearchDot1" Storyboard.TargetProperty="Opacity">
@@ -193,6 +229,12 @@
                     </ItemsControl>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,12,0">
+                            <Border Style="{StaticResource KbdBadge}">
+                                <TextBlock Text="Ctrl+G" Style="{StaticResource KbdText}" />
+                            </Border>
+                            <TextBlock Text="View" Style="{StaticResource HintLabel}" />
+                        </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <Border Style="{StaticResource KbdBadge}">
                                 <TextBlock Text="Esc" Style="{StaticResource KbdText}" />
@@ -238,9 +280,25 @@
                         Grid.Column="2"
                         Margin="16,0,0,0"
                         Orientation="Horizontal"
-                        VerticalAlignment="Center"
-                        Visibility="{Binding IsSearching, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        VerticalAlignment="Center">
+                        <ToggleButton
+                            Style="{StaticResource ViewToggleButton}"
+                            IsChecked="{Binding IsListView, Mode=OneWay}"
+                            Command="{Binding SetListViewCommand}">
+                            <TextBlock Text="List" FontSize="11.5" />
+                        </ToggleButton>
+                        <ToggleButton
+                            Style="{StaticResource ViewToggleButton}"
+                            IsChecked="{Binding IsGridView, Mode=OneWay}"
+                            Command="{Binding SetGridViewCommand}">
+                            <TextBlock Text="Grid" FontSize="11.5" />
+                        </ToggleButton>
+
+                        <StackPanel
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Margin="6,0,0,0"
+                            Visibility="{Binding IsSearching, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <StackPanel.Triggers>
                                 <EventTrigger RoutedEvent="FrameworkElement.Loaded">
                                     <BeginStoryboard Storyboard="{StaticResource SearchDotStoryboard}" />
@@ -290,7 +348,8 @@
                         VirtualizingPanel.IsVirtualizing="True"
                         VirtualizingPanel.VirtualizationMode="Recycling"
                         ItemContainerStyle="{StaticResource ResultItemStyle}"
-                        FocusVisualStyle="{x:Null}">
+                        FocusVisualStyle="{x:Null}"
+                        Visibility="{Binding IsListView, Converter={StaticResource BooleanToVisibilityConverter}}">
 
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -343,6 +402,159 @@
                                         FontSize="10"
                                         Foreground="{DynamicResource TextFillColorDisabledBrush}" />
                                 </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <ListBox
+                        x:Name="ResultsGrid"
+                        ItemsSource="{Binding GridRows}"
+                        MaxHeight="430"
+                        Margin="8,8,8,10"
+                        BorderThickness="0"
+                        Background="Transparent"
+                        ScrollViewer.CanContentScroll="True"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        VirtualizingPanel.IsVirtualizing="True"
+                        VirtualizingPanel.VirtualizationMode="Recycling"
+                        VirtualizingPanel.ScrollUnit="Pixel"
+                        HorizontalContentAlignment="Stretch"
+                        FocusVisualStyle="{x:Null}"
+                        Visibility="{Binding IsGridView, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Focusable" Value="False" />
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="Margin" Value="0" />
+                                <Setter Property="BorderThickness" Value="0" />
+                                <Setter Property="Background" Value="Transparent" />
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <ContentPresenter />
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <ItemsControl ItemsSource="{Binding Items}" HorizontalAlignment="Stretch">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="3" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button
+                                                Command="{Binding DataContext.SelectGridResultCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                CommandParameter="{Binding Index}"
+                                                Margin="0,0,12,12"
+                                                Padding="0"
+                                                HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch"
+                                                VerticalContentAlignment="Stretch"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                FocusVisualStyle="{x:Null}">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border
+                                                            x:Name="Card"
+                                                            CornerRadius="12"
+                                                            BorderThickness="1"
+                                                            Background="#242424"
+                                                            BorderBrush="#333333">
+                                                            <Grid>
+                                                                <Grid.RowDefinitions>
+                                                                    <RowDefinition Height="110" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                </Grid.RowDefinitions>
+
+                                                                <Border
+                                                                    Grid.Row="0"
+                                                                    Background="#383838"
+                                                                    CornerRadius="12,12,0,0"
+                                                                    ClipToBounds="True"
+                                                                    Loaded="GridCard_Loaded">
+                                                                    <Grid>
+                                                                        <Image
+                                                                            Source="{Binding Result.Preview}"
+                                                                            Stretch="Uniform"
+                                                                            Visibility="{Binding Result.HasPreview, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                                                                        <Grid Visibility="{Binding Result.ShowsPreviewPlaceholder, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                            <Border
+                                                                                Width="40"
+                                                                                Height="40"
+                                                                                CornerRadius="12"
+                                                                                Background="#4A4A4A"
+                                                                                HorizontalAlignment="Center"
+                                                                                VerticalAlignment="Center">
+                                                                                <Grid>
+                                                                                    <Image
+                                                                                        Source="{Binding Result.Icon}"
+                                                                                        Width="22"
+                                                                                        Height="22"
+                                                                                        HorizontalAlignment="Center"
+                                                                                        VerticalAlignment="Center"
+                                                                                        RenderOptions.BitmapScalingMode="HighQuality" />
+                                                                                    <TextBlock
+                                                                                        Text="{Binding Result.DisplayIconGlyph}"
+                                                                                        FontSize="15"
+                                                                                        HorizontalAlignment="Center"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Foreground="#F3F3F3" />
+                                                                                </Grid>
+                                                                            </Border>
+                                                                        </Grid>
+                                                                    </Grid>
+                                                                </Border>
+
+                                                                <StackPanel Grid.Row="1" Margin="10,8,10,10">
+                                                                    <TextBlock
+                                                                        Text="{Binding Result.Title}"
+                                                                        FontSize="12.5"
+                                                                        Foreground="#F5F5F5"
+                                                                        TextTrimming="CharacterEllipsis" />
+                                                                    <TextBlock
+                                                                        Text="{Binding Result.Subtitle}"
+                                                                        FontSize="10.5"
+                                                                        Margin="0,2,0,0"
+                                                                        Foreground="#B9B9B9"
+                                                                        TextTrimming="CharacterEllipsis" />
+                                                                    <TextBlock
+                                                                        Text="{Binding Result.PluginName}"
+                                                                        FontSize="10"
+                                                                        Margin="0,6,0,0"
+                                                                        Foreground="#9B9B9B" />
+                                                                </StackPanel>
+                                                            </Grid>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="Card" Property="BorderBrush" Value="#454545" />
+                                                                <Setter TargetName="Card" Property="Background" Value="#272727" />
+                                                            </Trigger>
+                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                                                <Setter TargetName="Card" Property="Background" Value="#2A2A2A" />
+                                                            </DataTrigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>

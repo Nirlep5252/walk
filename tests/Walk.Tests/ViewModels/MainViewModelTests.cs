@@ -166,6 +166,77 @@ public class MainViewModelTests
         viewModel.Results.Select(result => result.Title).Should().ContainInOrder("App", "File");
     }
 
+    [Fact]
+    public void ResultsViewMode_Defaults_To_List_And_Can_Switch_To_Grid()
+    {
+        var viewModel = new MainViewModel(new QueryRouter([]));
+
+        viewModel.ResultsViewMode.Should().Be(ResultsViewMode.List);
+        viewModel.IsListView.Should().BeTrue();
+        viewModel.IsGridView.Should().BeFalse();
+
+        viewModel.SetGridViewCommand.Execute(null);
+
+        viewModel.ResultsViewMode.Should().Be(ResultsViewMode.Grid);
+        viewModel.IsListView.Should().BeFalse();
+        viewModel.IsGridView.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ToggleResultsView_Switches_Between_List_And_Grid()
+    {
+        var viewModel = new MainViewModel(new QueryRouter([]));
+
+        viewModel.ToggleResultsViewCommand.Execute(null);
+        viewModel.ResultsViewMode.Should().Be(ResultsViewMode.Grid);
+
+        viewModel.ToggleResultsViewCommand.Execute(null);
+        viewModel.ResultsViewMode.Should().Be(ResultsViewMode.List);
+    }
+
+    [Fact]
+    public async Task SearchAsync_Builds_Grid_Rows_For_All_Results()
+    {
+        var plugin = new BulkResultPlugin(60);
+        var viewModel = new MainViewModel(new QueryRouter([plugin]));
+
+        viewModel.SearchText = "bulk";
+        await WaitForAsync(() => viewModel.Results.Count == 60, TimeSpan.FromSeconds(2));
+
+        viewModel.GridRows.Should().HaveCount(20);
+        viewModel.GridRows.Sum(row => row.Items.Count).Should().Be(60);
+        viewModel.SetGridViewCommand.Execute(null);
+        viewModel.MoveSelection(40);
+        viewModel.SelectedIndex.Should().Be(40);
+    }
+
+    [Fact]
+    public void MoveSelection_Clamps_To_Result_Range()
+    {
+        var viewModel = new MainViewModel(new QueryRouter([]));
+        viewModel.Results.Add(new SearchResult
+        {
+            Title = "One",
+            PluginName = "Test",
+            Score = 1.0,
+            Actions = []
+        });
+        viewModel.Results.Add(new SearchResult
+        {
+            Title = "Two",
+            PluginName = "Test",
+            Score = 0.9,
+            Actions = []
+        });
+
+        viewModel.SelectedIndex = 0;
+        viewModel.MoveSelection(10);
+        viewModel.SelectedIndex.Should().Be(1);
+
+        viewModel.MoveSelection(-10);
+        viewModel.SelectedIndex.Should().Be(0);
+    }
+
     private static async Task WaitForAsync(Func<bool> condition, TimeSpan timeout)
     {
         var deadline = DateTime.UtcNow + timeout;

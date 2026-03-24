@@ -12,6 +12,7 @@ namespace Walk.Helpers;
 public static class IconExtractor
 {
     private const int ShellIconSize = 64;
+    private const int DefaultThumbnailSize = 256;
 
     private static readonly ConcurrentDictionary<string, ImageSource?> Cache = new(StringComparer.OrdinalIgnoreCase);
 
@@ -34,6 +35,27 @@ public static class IconExtractor
         }, ct);
     }
 
+    public static bool TryGetCachedThumbnail(string filePath, out ImageSource? thumbnail)
+    {
+        var expandedPath = ExpandPath(filePath);
+        return Cache.TryGetValue(GetThumbnailCacheKey(expandedPath), out thumbnail);
+    }
+
+    public static Task<ImageSource?> GetThumbnailAsync(string filePath, CancellationToken ct)
+    {
+        var expandedPath = ExpandPath(filePath);
+        if (TryGetCachedThumbnail(expandedPath, out var cachedThumbnail))
+            return Task.FromResult(cachedThumbnail);
+
+        return Task.Run(() =>
+        {
+            ct.ThrowIfCancellationRequested();
+            return Cache.GetOrAdd(
+                GetThumbnailCacheKey(expandedPath),
+                _ => ExtractThumbnailImage(expandedPath));
+        }, ct);
+    }
+
     public static ImageSource? GetIcon(string filePath, int iconIndex = 0)
     {
         var expandedPath = ExpandPath(filePath);
@@ -47,7 +69,7 @@ public static class IconExtractor
         try
         {
             if (IsShellPath(filePath))
-                return ExtractShellIconImage(filePath);
+                return ExtractShellImage(filePath, ShellIconSize, ShellItemImageFlags.BiggerSizeOk | ShellItemImageFlags.IconOnly);
 
             if (!File.Exists(filePath))
                 return null;
@@ -72,24 +94,46 @@ public static class IconExtractor
         }
     }
 
+    private static ImageSource? ExtractThumbnailImage(string filePath)
+    {
+        try
+        {
+            if (!File.Exists(filePath))
+                return null;
+
+            return ExtractShellImage(
+                    filePath,
+                    DefaultThumbnailSize,
+                    ShellItemImageFlags.BiggerSizeOk | ShellItemImageFlags.ThumbnailOnly)
+                ?? ExtractShellImage(
+                    filePath,
+                    DefaultThumbnailSize,
+                    ShellItemImageFlags.BiggerSizeOk);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public static bool IsShellPath(string path)
     {
         return path.StartsWith(@"shell:", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static ImageSource? ExtractShellIconImage(string shellPath)
+    private static ImageSource? ExtractShellImage(string parsingName, int size, ShellItemImageFlags flags)
     {
         try
         {
-            var factory = CreateShellItemImageFactory(shellPath);
+            var factory = CreateShellItemImageFactory(parsingName);
             if (factory is null)
                 return null;
 
             try
             {
                 factory.GetImage(
-                    new NativeSize { Width = ShellIconSize, Height = ShellIconSize },
-                    ShellItemImageFlags.BiggerSizeOk | ShellItemImageFlags.IconOnly,
+                    new NativeSize { Width = size, Height = size },
+                    flags,
                     out var bitmapHandle);
 
                 if (bitmapHandle == IntPtr.Zero)
@@ -101,7 +145,7 @@ public static class IconExtractor
                         bitmapHandle,
                         IntPtr.Zero,
                         Int32Rect.Empty,
-                        BitmapSizeOptions.FromWidthAndHeight(ShellIconSize, ShellIconSize));
+                        BitmapSizeOptions.FromWidthAndHeight(size, size));
                     source.Freeze();
                     return source;
                 }
@@ -200,6 +244,11 @@ public static class IconExtractor
     private static string GetCacheKey(string filePath, int iconIndex)
     {
         return $"{filePath}|{iconIndex}";
+    }
+
+    private static string GetThumbnailCacheKey(string filePath)
+    {
+        return $"thumbnail|{filePath}|{DefaultThumbnailSize}";
     }
 
     [StructLayout(LayoutKind.Sequential)]
