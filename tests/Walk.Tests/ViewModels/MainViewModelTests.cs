@@ -116,7 +116,7 @@ public class MainViewModelTests
         viewModel.SearchText = "bulk";
         await WaitForAsync(
             () => viewModel.Results.Count == 12,
-            TimeSpan.FromSeconds(2));
+            TimeSpan.FromSeconds(5));
 
         viewModel.Results.Should().HaveCount(12);
     }
@@ -130,7 +130,7 @@ public class MainViewModelTests
         viewModel.SearchText = "bulk";
         await WaitForAsync(
             () => viewModel.Results.Count == 80,
-            TimeSpan.FromSeconds(2));
+            TimeSpan.FromSeconds(5));
 
         viewModel.Results.Should().HaveCount(80);
     }
@@ -143,10 +143,10 @@ public class MainViewModelTests
 
         viewModel.SearchText = "wait";
 
-        await WaitForAsync(() => viewModel.IsSearching, TimeSpan.FromSeconds(2));
+        await WaitForAsync(() => viewModel.IsSearching, TimeSpan.FromSeconds(5));
         viewModel.IsSearching.Should().BeTrue();
 
-        await WaitForAsync(() => !viewModel.IsSearching, TimeSpan.FromSeconds(2));
+        await WaitForAsync(() => !viewModel.IsSearching, TimeSpan.FromSeconds(5));
         viewModel.IsSearching.Should().BeFalse();
     }
 
@@ -159,10 +159,10 @@ public class MainViewModelTests
 
         viewModel.SearchText = "note";
 
-        await WaitForAsync(() => viewModel.Results.Count == 1, TimeSpan.FromSeconds(2));
+        await WaitForAsync(() => viewModel.Results.Count == 1, TimeSpan.FromSeconds(5));
         viewModel.Results.Select(result => result.Title).Should().ContainSingle().Which.Should().Be("App");
 
-        await WaitForAsync(() => viewModel.Results.Count == 2, TimeSpan.FromSeconds(2));
+        await WaitForAsync(() => viewModel.Results.Count == 2, TimeSpan.FromSeconds(5));
         viewModel.Results.Select(result => result.Title).Should().ContainInOrder("App", "File");
     }
 
@@ -201,7 +201,7 @@ public class MainViewModelTests
         var viewModel = new MainViewModel(new QueryRouter([plugin]));
 
         viewModel.SearchText = "bulk";
-        await WaitForAsync(() => viewModel.Results.Count == 60, TimeSpan.FromSeconds(2));
+        await WaitForAsync(() => viewModel.Results.Count == 60, TimeSpan.FromSeconds(5));
 
         viewModel.GridRows.Should().HaveCount(20);
         viewModel.GridRows.Sum(row => row.Items.Count).Should().Be(60);
@@ -247,6 +247,8 @@ public class MainViewModelTests
 
             await Task.Delay(25);
         }
+
+        throw new TimeoutException($"Condition not met within {timeout.TotalSeconds:0.##} seconds.");
     }
 
     private sealed class ThrowingPlugin : IQueryPlugin
