@@ -28,6 +28,7 @@ public partial class App : System.Windows.Application
     private RunHistoryService? _runHistoryService;
     private EverythingBundledRuntime? _everythingRuntime;
     private EverythingSearchService? _everythingSearchService;
+    private DefaultBrowserService? _defaultBrowserService;
     private QueryRouter? _router;
     private WalkSettings _settings = new();
     private SettingsWindow? _settingsWindow;
@@ -64,6 +65,7 @@ public partial class App : System.Windows.Application
         _runHistoryService = new RunHistoryService(dataDir);
         _everythingRuntime = new EverythingBundledRuntime(dataDir);
         _everythingSearchService = new EverythingSearchService(_everythingRuntime);
+        _defaultBrowserService = new DefaultBrowserService();
         await _indexService.BuildIndexAsync();
         _indexService.StartWatching();
         if (_settings.EnableFileSearch)
@@ -438,10 +440,13 @@ public partial class App : System.Windows.Application
         if (settings.EnableRunner)
             plugins.Add(new RunPlugin(_runHistoryService));
 
+        plugins.Add(new AppSearchPlugin(_indexService));
+        if (_defaultBrowserService is not null)
+            plugins.Add(new WebSearchPlugin(_defaultBrowserService));
+
         if (settings.EnableFileSearch)
             plugins.Add(new FileSearchPlugin(_everythingSearchService));
 
-        plugins.Add(new AppSearchPlugin(_indexService));
         return plugins;
     }
 

@@ -73,6 +73,39 @@ public class QueryRouterTests
     }
 
     [Fact]
+    public async Task RouteAsync_Places_Web_Result_After_Apps_And_Before_Files()
+    {
+        var appPlugin = Substitute.For<IQueryPlugin>();
+        appPlugin.Name.Returns("Apps");
+        appPlugin.Priority.Returns(1);
+        appPlugin.QueryAsync("launcher", Arg.Any<CancellationToken>())
+            .Returns([
+                new SearchResult { Title = "Launcher", Score = 0.6, PluginName = "Apps", Actions = [] }
+            ]);
+
+        var webPlugin = Substitute.For<IQueryPlugin>();
+        webPlugin.Name.Returns("Web");
+        webPlugin.Priority.Returns(1);
+        webPlugin.QueryAsync("launcher", Arg.Any<CancellationToken>())
+            .Returns([
+                new SearchResult { Title = "Search the web", Score = 0.0, PluginName = "Web", Actions = [] }
+            ]);
+
+        var filePlugin = Substitute.For<IQueryPlugin>();
+        filePlugin.Name.Returns("Files");
+        filePlugin.Priority.Returns(1);
+        filePlugin.QueryAsync("launcher", Arg.Any<CancellationToken>())
+            .Returns([
+                new SearchResult { Title = "launcher.log", Score = 0.95, PluginName = "Files", Actions = [] }
+            ]);
+
+        var router = new QueryRouter([appPlugin, webPlugin, filePlugin]);
+        var results = await router.RouteAsync("launcher", CancellationToken.None);
+
+        results.Select(result => result.PluginName).Should().ContainInOrder("Apps", "Web", "Files");
+    }
+
+    [Fact]
     public async Task RouteAsync_Handles_Plugin_Exception_Gracefully()
     {
         var faultyPlugin = Substitute.For<IQueryPlugin>();
@@ -267,6 +300,64 @@ public class QueryRouterTests
 
         snapshots.Should().HaveCount(2);
         snapshots[1].Select(result => result.PluginName).Should().ContainInOrder("Apps", "Files");
+    }
+
+    [Fact]
+    public async Task RouteIncrementalAsync_Places_Web_Result_After_Apps_And_Before_Files()
+    {
+        var appPlugin = Substitute.For<IQueryPlugin>();
+        appPlugin.Name.Returns("Apps");
+        appPlugin.Priority.Returns(1);
+        appPlugin.QueryAsync("launcher", Arg.Any<CancellationToken>())
+            .Returns(async _ =>
+            {
+                await Task.Delay(40);
+                return (IReadOnlyList<SearchResult>)
+                [
+                    new SearchResult { Title = "Launcher", Score = 0.5, PluginName = "Apps", Actions = [] }
+                ];
+            });
+
+        var webPlugin = Substitute.For<IQueryPlugin>();
+        webPlugin.Name.Returns("Web");
+        webPlugin.Priority.Returns(1);
+        webPlugin.QueryAsync("launcher", Arg.Any<CancellationToken>())
+            .Returns(async _ =>
+            {
+                await Task.Delay(10);
+                return (IReadOnlyList<SearchResult>)
+                [
+                    new SearchResult { Title = "Search the web", Score = 0.0, PluginName = "Web", Actions = [] }
+                ];
+            });
+
+        var filePlugin = Substitute.For<IQueryPlugin>();
+        filePlugin.Name.Returns("Files");
+        filePlugin.Priority.Returns(1);
+        filePlugin.QueryAsync("launcher", Arg.Any<CancellationToken>())
+            .Returns(async _ =>
+            {
+                await Task.Delay(20);
+                return (IReadOnlyList<SearchResult>)
+                [
+                    new SearchResult { Title = "launcher.log", Score = 0.95, PluginName = "Files", Actions = [] }
+                ];
+            });
+
+        var router = new QueryRouter([appPlugin, webPlugin, filePlugin]);
+        var snapshots = new List<IReadOnlyList<SearchResult>>();
+
+        await router.RouteIncrementalAsync(
+            "launcher",
+            results =>
+            {
+                snapshots.Add(results.ToList());
+                return Task.CompletedTask;
+            },
+            CancellationToken.None);
+
+        snapshots.Should().HaveCount(3);
+        snapshots[^1].Select(result => result.PluginName).Should().ContainInOrder("Apps", "Web", "Files");
     }
 
     [Fact]
