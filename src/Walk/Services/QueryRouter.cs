@@ -34,10 +34,7 @@ public sealed class QueryRouter
         if (ct.IsCancellationRequested)
             return [];
 
-        return results
-            .SelectMany(r => r)
-            .OrderByDescending(r => r.Score)
-            .ToList();
+        return SortResults(results.SelectMany(r => r));
     }
 
     public async Task RouteIncrementalAsync(
@@ -87,10 +84,7 @@ public sealed class QueryRouter
                 resultsByPlugin[update.Plugin] = update.Results.ToList();
             }
 
-            var orderedResults = resultsByPlugin.Values
-                .SelectMany(result => result)
-                .OrderByDescending(result => result.Score)
-                .ToList();
+            var orderedResults = SortResults(resultsByPlugin.Values.SelectMany(result => result));
 
             await onResultsAvailable(orderedResults).ConfigureAwait(false);
         }
@@ -155,6 +149,24 @@ public sealed class QueryRouter
     private static IReadOnlyList<IQueryPlugin> OrderPlugins(IEnumerable<IQueryPlugin> plugins)
     {
         return plugins.OrderByDescending(p => p.Priority).ToList();
+    }
+
+    private static List<SearchResult> SortResults(IEnumerable<SearchResult> results)
+    {
+        return results
+            .OrderBy(GetResultCategoryRank)
+            .ThenByDescending(result => result.Score)
+            .ToList();
+    }
+
+    private static int GetResultCategoryRank(SearchResult result)
+    {
+        return result.PluginName switch
+        {
+            "Apps" => 0,
+            "Files" => 2,
+            _ => 1,
+        };
     }
 
     private sealed record PluginResultsUpdate(IQueryPlugin Plugin, IReadOnlyList<SearchResult> Results, bool Append);

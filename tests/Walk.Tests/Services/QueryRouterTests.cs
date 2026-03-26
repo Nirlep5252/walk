@@ -48,6 +48,31 @@ public class QueryRouterTests
     }
 
     [Fact]
+    public async Task RouteAsync_Prioritizes_App_Results_Before_File_Results()
+    {
+        var appPlugin = Substitute.For<IQueryPlugin>();
+        appPlugin.Name.Returns("Apps");
+        appPlugin.Priority.Returns(1);
+        appPlugin.QueryAsync("launcher", Arg.Any<CancellationToken>())
+            .Returns([
+                new SearchResult { Title = "Minecraft Launcher", Score = 0.45, PluginName = "Apps", Actions = [] }
+            ]);
+
+        var filePlugin = Substitute.For<IQueryPlugin>();
+        filePlugin.Name.Returns("Files");
+        filePlugin.Priority.Returns(1);
+        filePlugin.QueryAsync("launcher", Arg.Any<CancellationToken>())
+            .Returns([
+                new SearchResult { Title = "launcher.log", Score = 0.92, PluginName = "Files", Actions = [] }
+            ]);
+
+        var router = new QueryRouter([appPlugin, filePlugin]);
+        var results = await router.RouteAsync("launcher", CancellationToken.None);
+
+        results.Select(result => result.PluginName).Should().ContainInOrder("Apps", "Files");
+    }
+
+    [Fact]
     public async Task RouteAsync_Handles_Plugin_Exception_Gracefully()
     {
         var faultyPlugin = Substitute.For<IQueryPlugin>();
@@ -197,6 +222,51 @@ public class QueryRouterTests
         snapshots.Should().HaveCount(2);
         snapshots[0].Select(result => result.Title).Should().ContainSingle().Which.Should().Be("One");
         snapshots[1].Select(result => result.Title).Should().ContainInOrder("Two", "One");
+    }
+
+    [Fact]
+    public async Task RouteIncrementalAsync_Prioritizes_App_Results_Before_File_Results()
+    {
+        var appPlugin = Substitute.For<IQueryPlugin>();
+        appPlugin.Name.Returns("Apps");
+        appPlugin.Priority.Returns(1);
+        appPlugin.QueryAsync("launcher", Arg.Any<CancellationToken>())
+            .Returns(async _ =>
+            {
+                await Task.Delay(40);
+                return (IReadOnlyList<SearchResult>)
+                [
+                    new SearchResult { Title = "Minecraft Launcher", Score = 0.45, PluginName = "Apps", Actions = [] }
+                ];
+            });
+
+        var filePlugin = Substitute.For<IQueryPlugin>();
+        filePlugin.Name.Returns("Files");
+        filePlugin.Priority.Returns(1);
+        filePlugin.QueryAsync("launcher", Arg.Any<CancellationToken>())
+            .Returns(async _ =>
+            {
+                await Task.Delay(20);
+                return (IReadOnlyList<SearchResult>)
+                [
+                    new SearchResult { Title = "launcher.log", Score = 0.92, PluginName = "Files", Actions = [] }
+                ];
+            });
+
+        var router = new QueryRouter([appPlugin, filePlugin]);
+        var snapshots = new List<IReadOnlyList<SearchResult>>();
+
+        await router.RouteIncrementalAsync(
+            "launcher",
+            results =>
+            {
+                snapshots.Add(results.ToList());
+                return Task.CompletedTask;
+            },
+            CancellationToken.None);
+
+        snapshots.Should().HaveCount(2);
+        snapshots[1].Select(result => result.PluginName).Should().ContainInOrder("Apps", "Files");
     }
 
     [Fact]
