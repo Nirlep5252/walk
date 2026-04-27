@@ -8,6 +8,10 @@ namespace Walk.Plugins;
 
 public sealed class AppSearchPlugin : IQueryPlugin
 {
+    private const double HabitFrequencyWeight = 0.58;
+    private const double HabitRecencyWeight = 0.42;
+    private const double HabitRecencyHalfLifeDays = 10.0;
+
     public string Name => "Apps";
     public int Priority => 50;
 
@@ -21,7 +25,7 @@ public sealed class AppSearchPlugin : IQueryPlugin
     public Task<IReadOnlyList<SearchResult>> QueryAsync(string query, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(query))
-            return Task.FromResult<IReadOnlyList<SearchResult>>([]);
+            return Task.FromResult(GetHabitResults(ct));
 
         var matches = new List<(AppEntry Entry, double Score)>();
 
@@ -44,69 +48,104 @@ public sealed class AppSearchPlugin : IQueryPlugin
 
         var results = new List<SearchResult>(topMatches.Count);
         foreach (var (entry, score) in topMatches)
-        {
-            var actions = new List<SearchAction>
-            {
-                new()
-                {
-                    Label = "Run",
-                    HintLabel = "Run",
-                    Execute = () =>
-                    {
-                        ProcessHelper.Launch(entry.ExecutablePath, asAdmin: false, entry.Arguments, entry.WorkingDirectory);
-                        _ = _indexService.RecordLaunchAsync(entry);
-                    },
-                    KeyGesture = "Enter"
-                },
-                new()
-                {
-                    Label = "Run as Administrator",
-                    HintLabel = "Admin",
-                    Execute = () =>
-                    {
-                        ProcessHelper.Launch(entry.ExecutablePath, asAdmin: true, entry.Arguments, entry.WorkingDirectory);
-                        _ = _indexService.RecordLaunchAsync(entry);
-                    },
-                    KeyGesture = "Ctrl+Enter"
-                },
-            };
-
-            var revealPath = GetRevealPath(entry);
-            if (revealPath is not null)
-            {
-                actions.Add(new SearchAction
-                {
-                    Label = "Open File Location",
-                    HintLabel = "Reveal",
-                    Execute = () => ProcessHelper.OpenFileLocation(revealPath),
-                    KeyGesture = "Ctrl+O"
-                });
-            }
-
-            var result = new SearchResult
-            {
-                Title = entry.Name,
-                Subtitle = GetSubtitle(entry),
-                PluginName = Name,
-                Score = score,
-                IconGlyph = "\u25B6",
-                Actions = actions,
-            };
-
-            var iconPath = GetIconPath(entry);
-            if (iconPath is not null && IconExtractor.TryGetCachedIcon(iconPath, entry.IconIndex, out var cachedIcon))
-            {
-                result.Icon = cachedIcon;
-            }
-            else if (iconPath is not null)
-            {
-                _ = PopulateIconAsync(result, iconPath, entry.IconIndex, ct);
-            }
-
-            results.Add(result);
-        }
+            results.Add(CreateResult(entry, score, ct));
 
         return Task.FromResult<IReadOnlyList<SearchResult>>(results);
+    }
+
+    private IReadOnlyList<SearchResult> GetHabitResults(CancellationToken ct)
+    {
+        var usedEntries = _indexService.Entries
+            .Where(static entry => entry.LaunchCount > 0)
+            .ToList();
+
+        if (usedEntries.Count == 0)
+            return [];
+
+        var maxLaunchCount = usedEntries.Max(static entry => entry.LaunchCount);
+
+        return usedEntries
+            .Select(entry => (Entry: entry, Score: GetHabitScore(entry, maxLaunchCount)))
+            .OrderByDescending(static match => match.Score)
+            .ThenByDescending(static match => match.Entry.LastUsed)
+            .ThenBy(static match => match.Entry.Name, StringComparer.OrdinalIgnoreCase)
+            .Take(10)
+            .Select(match => CreateResult(match.Entry, match.Score, ct))
+            .ToList();
+    }
+
+    private SearchResult CreateResult(AppEntry entry, double score, CancellationToken ct)
+    {
+        var actions = new List<SearchAction>
+        {
+            new()
+            {
+                Label = "Run",
+                HintLabel = "Run",
+                Execute = () =>
+                {
+                    ProcessHelper.Launch(entry.ExecutablePath, asAdmin: false, entry.Arguments, entry.WorkingDirectory);
+                    _ = _indexService.RecordLaunchAsync(entry);
+                },
+                KeyGesture = "Enter"
+            },
+            new()
+            {
+                Label = "Run as Administrator",
+                HintLabel = "Admin",
+                Execute = () =>
+                {
+                    ProcessHelper.Launch(entry.ExecutablePath, asAdmin: true, entry.Arguments, entry.WorkingDirectory);
+                    _ = _indexService.RecordLaunchAsync(entry);
+                },
+                KeyGesture = "Ctrl+Enter"
+            },
+        };
+
+        var revealPath = GetRevealPath(entry);
+        if (revealPath is not null)
+        {
+            actions.Add(new SearchAction
+            {
+                Label = "Open File Location",
+                HintLabel = "Reveal",
+                Execute = () => ProcessHelper.OpenFileLocation(revealPath),
+                KeyGesture = "Ctrl+O"
+            });
+        }
+
+        var result = new SearchResult
+        {
+            Title = entry.Name,
+            Subtitle = GetSubtitle(entry),
+            PluginName = Name,
+            Score = score,
+            IconGlyph = "\u25B6",
+            Actions = actions,
+        };
+
+        var iconPath = GetIconPath(entry);
+        if (iconPath is not null && IconExtractor.TryGetCachedIcon(iconPath, entry.IconIndex, out var cachedIcon))
+        {
+            result.Icon = cachedIcon;
+        }
+        else if (iconPath is not null)
+        {
+            _ = PopulateIconAsync(result, iconPath, entry.IconIndex, ct);
+        }
+
+        return result;
+    }
+
+    private static double GetHabitScore(AppEntry entry, int maxLaunchCount)
+    {
+        var frequencyScore = maxLaunchCount <= 1
+            ? 1.0
+            : Math.Log(entry.LaunchCount + 1) / Math.Log(maxLaunchCount + 1);
+        var ageDays = Math.Max(0.0, (DateTime.UtcNow - entry.LastUsed).TotalDays);
+        var recencyScore = Math.Pow(0.5, ageDays / HabitRecencyHalfLifeDays);
+
+        return 0.5 + ((frequencyScore * HabitFrequencyWeight) + (recencyScore * HabitRecencyWeight)) * 0.49;
     }
 
     private static FuzzyMatchResult MatchEntry(string query, AppEntry entry)

@@ -7,6 +7,10 @@ namespace Walk.Plugins;
 
 public sealed class RunPlugin : IQueryPlugin
 {
+    private const double HabitFrequencyWeight = 0.58;
+    private const double HabitRecencyWeight = 0.42;
+    private const double HabitRecencyHalfLifeDays = 10.0;
+
     private readonly RunHistoryService _historyService;
     private readonly IRunTargetLauncher _launcher;
 
@@ -77,14 +81,15 @@ public sealed class RunPlugin : IQueryPlugin
     public Task<IReadOnlyList<SearchResult>> QueryAsync(string query, CancellationToken ct)
     {
         var (isExplicitRunQuery, normalizedQuery) = NormalizeQuery(query);
-        if (string.IsNullOrWhiteSpace(normalizedQuery) && !isExplicitRunQuery)
-            return Task.FromResult<IReadOnlyList<SearchResult>>([]);
 
         var candidates = new List<RunCandidate>();
 
         if (string.IsNullOrWhiteSpace(normalizedQuery))
         {
-            AddDiscoveryCandidates(candidates);
+            if (isExplicitRunQuery)
+                AddDiscoveryCandidates(candidates);
+            else
+                AddHabitCandidates(candidates);
         }
         else
         {
@@ -109,6 +114,25 @@ public sealed class RunPlugin : IQueryPlugin
             .ToList();
 
         return Task.FromResult(results);
+    }
+
+    private void AddHabitCandidates(ICollection<RunCandidate> candidates)
+    {
+        var historyEntries = _historyService.GetEntries()
+            .Where(static entry => entry.LaunchCount > 0)
+            .ToList();
+
+        if (historyEntries.Count == 0)
+            return;
+
+        var maxLaunchCount = historyEntries.Max(static entry => entry.LaunchCount);
+        foreach (var entry in historyEntries)
+        {
+            candidates.Add(new RunCandidate(
+                entry.ToRunTarget(),
+                GetHabitScore(entry.LaunchCount, entry.LastUsedUtc, maxLaunchCount),
+                "History"));
+        }
     }
 
     private void AddDiscoveryCandidates(ICollection<RunCandidate> candidates)
@@ -273,6 +297,17 @@ public sealed class RunPlugin : IQueryPlugin
         };
 
         return Math.Min(0.99, 0.56 + (baseMatch * 0.24) + usageBoost + recencyBoost);
+    }
+
+    private static double GetHabitScore(int launchCount, DateTime lastUsedUtc, int maxLaunchCount)
+    {
+        var frequencyScore = maxLaunchCount <= 1
+            ? 1.0
+            : Math.Log(launchCount + 1) / Math.Log(maxLaunchCount + 1);
+        var ageDays = Math.Max(0.0, (DateTime.UtcNow - lastUsedUtc).TotalDays);
+        var recencyScore = Math.Pow(0.5, ageDays / HabitRecencyHalfLifeDays);
+
+        return 0.5 + ((frequencyScore * HabitFrequencyWeight) + (recencyScore * HabitRecencyWeight)) * 0.49;
     }
 
     private static RunTarget? TryCreateDirectTarget(string query, bool allowArbitraryCommand)

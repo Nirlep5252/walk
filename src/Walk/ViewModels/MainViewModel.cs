@@ -8,11 +8,13 @@ namespace Walk.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
+    private const int DefaultSuggestionCount = 5;
     private const int GridColumnCount = 3;
     private readonly QueryRouter _router;
     private readonly int _maxResults;
     private CancellationTokenSource? _cts;
     private int _searchVersion;
+    private bool _ignoreNextSearchTextChange;
 
     [ObservableProperty]
     private string _searchText = "";
@@ -54,6 +56,12 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSearchTextChanged(string value)
     {
+        if (_ignoreNextSearchTextChange)
+        {
+            _ignoreNextSearchTextChange = false;
+            return;
+        }
+
         _ = SearchAsync(value);
     }
 
@@ -73,11 +81,8 @@ public partial class MainViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(query))
         {
-            Results.Clear();
-            GridRows.Clear();
-            SelectedIndex = -1;
+            await LoadDefaultResultsAsync(searchVersion, token, clearWhenEmpty: true);
             IsSearching = false;
-            RefreshSelectionState();
             return;
         }
 
@@ -159,7 +164,8 @@ public partial class MainViewModel : ObservableObject
     public void Show()
     {
         CancelPendingSearch();
-        Interlocked.Increment(ref _searchVersion);
+        var searchVersion = Interlocked.Increment(ref _searchVersion);
+        _ignoreNextSearchTextChange = !string.IsNullOrEmpty(SearchText);
         SearchText = "";
         Results.Clear();
         GridRows.Clear();
@@ -167,6 +173,9 @@ public partial class MainViewModel : ObservableObject
         IsSearching = false;
         RefreshSelectionState();
         IsVisible = true;
+
+        _cts = new CancellationTokenSource();
+        _ = LoadDefaultResultsAsync(searchVersion, _cts.Token, clearWhenEmpty: false);
     }
 
     public void Hide()
@@ -280,6 +289,26 @@ public partial class MainViewModel : ObservableObject
                 if (!token.IsCancellationRequested && searchVersion == _searchVersion)
                     ApplyResults(results);
             }).Task;
+    }
+
+    private async Task LoadDefaultResultsAsync(int searchVersion, CancellationToken token, bool clearWhenEmpty)
+    {
+        IReadOnlyList<SearchResult> defaultResults = [];
+        try
+        {
+            defaultResults = await _router.RouteDefaultAsync(token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (token.IsCancellationRequested || searchVersion != _searchVersion)
+            return;
+
+        var visibleResults = defaultResults.Take(DefaultSuggestionCount).ToList();
+        if (visibleResults.Count > 0 || clearWhenEmpty)
+            ApplyResults(visibleResults);
     }
 
     private void ApplyResults(IReadOnlyList<SearchResult> results)

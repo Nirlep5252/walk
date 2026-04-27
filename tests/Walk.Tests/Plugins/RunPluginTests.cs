@@ -78,6 +78,25 @@ public class RunPluginTests : IDisposable
     }
 
     [Fact]
+    public async Task QueryAsync_BlankQuery_Returns_History_Not_Discovery_Catalog()
+    {
+        _historyService.RecordLaunch("services", new RunTarget
+        {
+            Title = "Services",
+            Command = "services.msc",
+            Subtitle = "Manage Windows services",
+            Kind = "MMC",
+            SupportsRunAsAdmin = true,
+        });
+
+        var results = await _plugin.QueryAsync("", CancellationToken.None);
+
+        results.Should().ContainSingle();
+        results[0].Title.Should().Be("Services");
+        results.Should().NotContain(result => result.Title == "Command Prompt");
+    }
+
+    [Fact]
     public async Task QueryAsync_Returns_Direct_Result_For_Explicit_Arbitrary_Command()
     {
         var results = await _plugin.QueryAsync(">randomstringhere", CancellationToken.None);

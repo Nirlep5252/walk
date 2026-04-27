@@ -95,6 +95,39 @@ public class AppSearchPluginTests
         results[0].Actions.Should().NotContain(action => action.Label == "Open File Location");
     }
 
+    [Fact]
+    public async Task QueryAsync_BlankQuery_Returns_HabitRanked_Apps()
+    {
+        var plugin = new AppSearchPlugin(
+            new StubAppIndexService(
+            [
+                new AppEntry
+                {
+                    Name = "Recently Opened",
+                    ExecutablePath = @"C:\Apps\Recent\recent.exe",
+                    LaunchCount = 1,
+                    LastUsed = DateTime.UtcNow,
+                },
+                new AppEntry
+                {
+                    Name = "Google Chrome",
+                    ExecutablePath = @"C:\Apps\Chrome\chrome.exe",
+                    LaunchCount = 100,
+                    LastUsed = DateTime.UtcNow.AddDays(-45),
+                },
+                new AppEntry
+                {
+                    Name = "Never Opened",
+                    ExecutablePath = @"C:\Apps\Never\never.exe",
+                },
+            ]));
+
+        var results = await plugin.QueryAsync("", CancellationToken.None);
+
+        results.Select(result => result.Title).Should().ContainInOrder("Google Chrome", "Recently Opened");
+        results.Should().NotContain(result => result.Title == "Never Opened");
+    }
+
     private sealed class StubAppIndexService(IReadOnlyList<AppEntry> entries) : IAppIndexService
     {
         public IReadOnlyList<AppEntry> Entries { get; } = entries;

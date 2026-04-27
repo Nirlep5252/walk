@@ -151,6 +151,21 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public async Task Show_Loads_Up_To_Five_Default_Results()
+    {
+        var plugin = new BlankResultPlugin(8);
+        var viewModel = new MainViewModel(new QueryRouter([plugin]));
+
+        viewModel.Show();
+
+        await WaitForAsync(() => viewModel.Results.Count == 5, TimeSpan.FromSeconds(5));
+        viewModel.Results.Select(result => result.Title)
+            .Should()
+            .ContainInOrder("Default 1", "Default 2", "Default 3", "Default 4", "Default 5");
+        viewModel.SelectedIndex.Should().Be(0);
+    }
+
+    [Fact]
     public async Task SearchAsync_Eventually_Shows_Ordered_Results()
     {
         var fastPlugin = new NamedDelayPlugin("App", 0.8, TimeSpan.FromMilliseconds(20));
@@ -298,6 +313,30 @@ public class MainViewModelTests
                     Actions = []
                 }
             ];
+        }
+    }
+
+    private sealed class BlankResultPlugin(int count) : IQueryPlugin
+    {
+        public string Name => "Blank";
+        public int Priority => 1;
+
+        public Task<IReadOnlyList<SearchResult>> QueryAsync(string query, CancellationToken ct)
+        {
+            if (!string.IsNullOrEmpty(query))
+                return Task.FromResult<IReadOnlyList<SearchResult>>([]);
+
+            IReadOnlyList<SearchResult> results = Enumerable.Range(1, count)
+                .Select(index => new SearchResult
+                {
+                    Title = $"Default {index}",
+                    PluginName = "Blank",
+                    Score = 1.0 - (index * 0.01),
+                    Actions = []
+                })
+                .ToList();
+
+            return Task.FromResult(results);
         }
     }
 

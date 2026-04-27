@@ -25,6 +25,31 @@ public class QueryRouterTests
     }
 
     [Fact]
+    public async Task RouteDefaultAsync_Uses_Score_Ranking_Across_Plugins()
+    {
+        var appPlugin = Substitute.For<IQueryPlugin>();
+        appPlugin.Name.Returns("Apps");
+        appPlugin.Priority.Returns(1);
+        appPlugin.QueryAsync("", Arg.Any<CancellationToken>())
+            .Returns([
+                new SearchResult { Title = "App", Score = 0.6, PluginName = "Apps", Actions = [] }
+            ]);
+
+        var runPlugin = Substitute.For<IQueryPlugin>();
+        runPlugin.Name.Returns("Run");
+        runPlugin.Priority.Returns(1);
+        runPlugin.QueryAsync("", Arg.Any<CancellationToken>())
+            .Returns([
+                new SearchResult { Title = "Run", Score = 0.95, PluginName = "Run", Actions = [] }
+            ]);
+
+        var router = new QueryRouter([appPlugin, runPlugin]);
+        var results = await router.RouteDefaultAsync(CancellationToken.None);
+
+        results.Select(result => result.Title).Should().ContainInOrder("Run", "App");
+    }
+
+    [Fact]
     public async Task RouteAsync_Merges_Results_From_Multiple_Plugins()
     {
         var plugin1 = Substitute.For<IQueryPlugin>();

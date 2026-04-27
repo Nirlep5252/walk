@@ -37,6 +37,21 @@ public sealed class QueryRouter
         return SortResults(results.SelectMany(r => r));
     }
 
+    public async Task<IReadOnlyList<SearchResult>> RouteDefaultAsync(CancellationToken ct)
+    {
+        if (ct.IsCancellationRequested)
+            return [];
+
+        var plugins = _plugins;
+        var tasks = plugins.Select(p => SafeQueryAsync(p, "", ct)).ToArray();
+        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+        if (ct.IsCancellationRequested)
+            return [];
+
+        return SortDefaultResults(results.SelectMany(r => r));
+    }
+
     public async Task RouteIncrementalAsync(
         string query,
         Func<IReadOnlyList<SearchResult>, Task> onResultsAvailable,
@@ -156,6 +171,14 @@ public sealed class QueryRouter
         return results
             .OrderBy(GetResultCategoryRank)
             .ThenByDescending(result => result.Score)
+            .ToList();
+    }
+
+    private static List<SearchResult> SortDefaultResults(IEnumerable<SearchResult> results)
+    {
+        return results
+            .OrderByDescending(result => result.Score)
+            .ThenBy(result => result.Title, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
