@@ -63,7 +63,11 @@
                                 Height="16"
                                 CornerRadius="1.5"
                                 Margin="0,0,0,0"
-                                Opacity="0">
+                                Opacity="0"
+                                RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <ScaleTransform x:Name="AccentBarScale" ScaleY="0.55" />
+                                </Border.RenderTransform>
                                 <Border.Background>
                                     <SolidColorBrush x:Name="AccentBrush" Color="{DynamicResource SystemAccentColorSecondary}" />
                                 </Border.Background>
@@ -73,7 +77,14 @@
                                 x:Name="ItemChrome"
                                 CornerRadius="6"
                                 Padding="12,8"
-                                Margin="6,1,4,1">
+                                Margin="6,1,4,1"
+                                RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <TransformGroup>
+                                        <ScaleTransform x:Name="ItemChromeScale" ScaleX="1" ScaleY="1" />
+                                        <TranslateTransform x:Name="ItemChromeTranslate" X="0" Y="0" />
+                                    </TransformGroup>
+                                </Border.RenderTransform>
                                 <Border.Background>
                                     <SolidColorBrush x:Name="ItemBg" Color="Transparent" />
                                 </Border.Background>
@@ -81,11 +92,37 @@
                             </Border>
                         </Grid>
                         <ControlTemplate.Triggers>
+                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ItemChromeTranslate" Storyboard.TargetProperty="Y" From="6" To="0" Duration="0:0:0.11">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut" />
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="ItemChromeScale" Storyboard.TargetProperty="ScaleX" From="0.992" To="1" Duration="0:0:0.11">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut" />
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="ItemChromeScale" Storyboard.TargetProperty="ScaleY" From="0.992" To="1" Duration="0:0:0.11">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut" />
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
                                             <ColorAnimation Storyboard.TargetName="ItemBg" Storyboard.TargetProperty="Color" To="#0CFFFFFF" Duration="0:0:0.08" />
+                                            <DoubleAnimation Storyboard.TargetName="ItemChromeTranslate" Storyboard.TargetProperty="X" To="2" Duration="0:0:0.08">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
@@ -93,6 +130,11 @@
                                     <BeginStoryboard>
                                         <Storyboard>
                                             <ColorAnimation Storyboard.TargetName="ItemBg" Storyboard.TargetProperty="Color" To="Transparent" Duration="0:0:0.08" />
+                                            <DoubleAnimation Storyboard.TargetName="ItemChromeTranslate" Storyboard.TargetProperty="X" To="0" Duration="0:0:0.08">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
@@ -103,6 +145,26 @@
                                         <Storyboard>
                                             <ColorAnimation Storyboard.TargetName="ItemBg" Storyboard.TargetProperty="Color" To="#0FFFFFFF" Duration="0:0:0.08" />
                                             <DoubleAnimation Storyboard.TargetName="AccentBar" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12" />
+                                            <DoubleAnimation Storyboard.TargetName="AccentBarScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.12">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ItemChromeTranslate" Storyboard.TargetProperty="X" To="3" Duration="0:0:0.09">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ItemChromeScale" Storyboard.TargetProperty="ScaleX" From="0.996" To="1" Duration="0:0:0.1">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ItemChromeScale" Storyboard.TargetProperty="ScaleY" From="0.996" To="1" Duration="0:0:0.1">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
@@ -111,6 +173,8 @@
                                         <Storyboard>
                                             <ColorAnimation Storyboard.TargetName="ItemBg" Storyboard.TargetProperty="Color" To="Transparent" Duration="0:0:0.08" />
                                             <DoubleAnimation Storyboard.TargetName="AccentBar" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.08" />
+                                            <DoubleAnimation Storyboard.TargetName="AccentBarScale" Storyboard.TargetProperty="ScaleY" To="0.55" Duration="0:0:0.08" />
+                                            <DoubleAnimation Storyboard.TargetName="ItemChromeTranslate" Storyboard.TargetProperty="X" To="0" Duration="0:0:0.08" />
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
@@ -139,13 +203,15 @@
             <Setter Property="Margin" Value="4,0,0,0" />
         </Style>
         <Style x:Key="ViewToggleButton" TargetType="ToggleButton">
-            <Setter Property="Margin" Value="0,0,6,0" />
-            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="0" />
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="#14FFFFFF" />
-            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
@@ -154,11 +220,10 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="8">
+                            CornerRadius="6">
                             <ContentPresenter
                                 HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Margin="{TemplateBinding Padding}" />
+                                VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -166,8 +231,7 @@
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-                                <Setter TargetName="Chrome" Property="Background" Value="#18FFFFFF" />
-                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#22FFFFFF" />
+                                <Setter TargetName="Chrome" Property="Background" Value="#22FFFFFF" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -200,14 +264,17 @@
 
     <Grid x:Name="RootGrid" RenderTransformOrigin="0.5,0.5">
         <Grid.RenderTransform>
-            <ScaleTransform x:Name="RootScaleTransform" ScaleX="1" ScaleY="1" />
+            <TransformGroup>
+                <ScaleTransform x:Name="RootScaleTransform" ScaleX="1" ScaleY="1" />
+                <TranslateTransform x:Name="RootTranslateTransform" Y="0" />
+            </TransformGroup>
         </Grid.RenderTransform>
 
         <DockPanel LastChildFill="True">
 
             <Border
                 DockPanel.Dock="Bottom"
-                Padding="14,7,14,9"
+                Padding="20,7,16,9"
                 BorderThickness="0,1,0,0"
                 BorderBrush="#0AFFFFFF"
                 Visibility="{Binding ShouldShowResultsChrome, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -249,17 +316,19 @@
 
             <StackPanel>
 
-                <Grid Margin="8,12,12,10">
+                <Grid Margin="20,12,14,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <ui:SymbolIcon
-                        Symbol="Search24"
-                        FontSize="22"
-                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                    <Path
+                        Width="22"
+                        Height="22"
+                        Data="{x:Static helpers:IconGeometry.Search}"
+                        Fill="{DynamicResource TextFillColorTertiaryBrush}"
+                        Stretch="Uniform"
                         VerticalAlignment="Center"
                         Margin="0,0,14,0" />
 
@@ -283,29 +352,19 @@
                         Margin="16,0,0,0"
                         Orientation="Horizontal"
                         VerticalAlignment="Center">
-                        <ToggleButton
-                            Style="{StaticResource ViewToggleButton}"
-                            IsChecked="{Binding IsListView, Mode=OneWay}"
-                            Command="{Binding SetListViewCommand}">
-                            <TextBlock Text="List" FontSize="11.5" />
-                        </ToggleButton>
-                        <ToggleButton
-                            Style="{StaticResource ViewToggleButton}"
-                            IsChecked="{Binding IsGridView, Mode=OneWay}"
-                            Command="{Binding SetGridViewCommand}">
-                            <TextBlock Text="Grid" FontSize="11.5" />
-                        </ToggleButton>
-
                         <StackPanel
                             Orientation="Horizontal"
                             VerticalAlignment="Center"
-                            Margin="6,0,0,0"
-                            Width="23">
+                            Width="0">
                             <StackPanel.Style>
                                 <Style TargetType="StackPanel">
+                                    <Setter Property="Width" Value="0" />
+                                    <Setter Property="Margin" Value="0" />
                                     <Setter Property="Opacity" Value="0" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsSearching}" Value="True">
+                                            <Setter Property="Width" Value="23" />
+                                            <Setter Property="Margin" Value="0,0,8,0" />
                                             <Setter Property="Opacity" Value="1" />
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -340,19 +399,68 @@
                                 Background="{DynamicResource SystemAccentColorPrimaryBrush}"
                                 Opacity="0.28" />
                         </StackPanel>
+
+                        <Border
+                            CornerRadius="8"
+                            Padding="1"
+                            Background="#08FFFFFF"
+                            BorderBrush="#18FFFFFF"
+                            BorderThickness="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="1" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <ToggleButton
+                                    Grid.Column="0"
+                                    Style="{StaticResource ViewToggleButton}"
+                                    IsChecked="{Binding IsListView, Mode=OneWay}"
+                                    Command="{Binding SetListViewCommand}"
+                                    ToolTip="List view">
+                                    <Path
+                                        Width="15"
+                                        Height="15"
+                                        Data="{x:Static helpers:IconGeometry.TextBulletList}"
+                                        Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                                        Stretch="Uniform" />
+                                </ToggleButton>
+
+                                <Rectangle
+                                    Grid.Column="1"
+                                    Width="1"
+                                    Margin="0,5"
+                                    Fill="#14FFFFFF" />
+
+                                <ToggleButton
+                                    Grid.Column="2"
+                                    Style="{StaticResource ViewToggleButton}"
+                                    IsChecked="{Binding IsGridView, Mode=OneWay}"
+                                    Command="{Binding SetGridViewCommand}"
+                                    ToolTip="Grid view">
+                                    <Path
+                                        Width="15"
+                                        Height="15"
+                                        Data="{x:Static helpers:IconGeometry.GridDots}"
+                                        Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                                        Stretch="Uniform" />
+                                </ToggleButton>
+                            </Grid>
+                        </Border>
                     </StackPanel>
                 </Grid>
 
                 <StackPanel Visibility="{Binding ShouldShowResultsChrome, Converter={StaticResource BooleanToVisibilityConverter}}">
 
-                    <Rectangle Height="1" Fill="#0AFFFFFF" Margin="14,0" />
+                    <Rectangle Height="1" Fill="#0AFFFFFF" Margin="20,0,16,0" />
 
                     <ListBox
                         x:Name="ResultsList"
                         ItemsSource="{Binding Results}"
                         SelectedIndex="{Binding SelectedIndex}"
                         Height="420"
-                        Margin="4,4,4,4"
+                        Margin="14,4,14,4"
                         BorderThickness="0"
                         Background="Transparent"
                         RenderOptions.BitmapScalingMode="LowQuality"
@@ -366,7 +474,11 @@
                         VirtualizingPanel.CacheLengthUnit="Page"
                         ItemContainerStyle="{StaticResource ResultItemStyle}"
                         FocusVisualStyle="{x:Null}"
-                        Visibility="{Binding IsListView, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding IsListView, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        RenderTransformOrigin="0.5,0.5">
+                        <ListBox.RenderTransform>
+                            <TranslateTransform x:Name="ResultsListTranslate" X="0" />
+                        </ListBox.RenderTransform>
 
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -382,20 +494,26 @@
                                         Width="32"
                                         Height="32"
                                         VerticalAlignment="Center">
-                                        <Border CornerRadius="8" Background="#12FFFFFF">
-                                            <TextBlock
-                                                Text="{Binding DisplayIconGlyph}"
-                                                FontSize="15"
+                                        <Border
+                                            CornerRadius="8"
+                                            Background="#12FFFFFF"
+                                            Visibility="{Binding ShowsIconPlaceholder, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Path
+                                                Width="19"
+                                                Height="19"
+                                                Data="{Binding FallbackIconGeometry}"
+                                                Fill="{DynamicResource TextFillColorSecondaryBrush}"
+                                                Stretch="Uniform"
                                                 HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                VerticalAlignment="Center" />
                                         </Border>
 
                                         <Image
                                             Source="{Binding Icon}"
                                             Width="32"
                                             Height="32"
-                                            RenderOptions.BitmapScalingMode="LowQuality" />
+                                            RenderOptions.BitmapScalingMode="LowQuality"
+                                            Visibility="{Binding HasIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     </Grid>
 
                                     <StackPanel Grid.Column="1" Margin="14,0,8,0" VerticalAlignment="Center">
@@ -427,7 +545,7 @@
                         x:Name="ResultsGrid"
                         ItemsSource="{Binding GridRows}"
                         Height="420"
-                        Margin="8,8,8,10"
+                        Margin="14,8,14,10"
                         BorderThickness="0"
                         Background="Transparent"
                         RenderOptions.BitmapScalingMode="LowQuality"
@@ -441,7 +559,11 @@
                         VirtualizingPanel.CacheLengthUnit="Page"
                         HorizontalContentAlignment="Stretch"
                         FocusVisualStyle="{x:Null}"
-                        Visibility="{Binding IsGridView, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding IsGridView, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        RenderTransformOrigin="0.5,0.5">
+                        <ListBox.RenderTransform>
+                            <TranslateTransform x:Name="ResultsGridTranslate" X="0" />
+                        </ListBox.RenderTransform>
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <VirtualizingStackPanel />
@@ -492,7 +614,14 @@
                                                             CornerRadius="12"
                                                             BorderThickness="1"
                                                             Background="#242424"
-                                                            BorderBrush="#333333">
+                                                            BorderBrush="#333333"
+                                                            RenderTransformOrigin="0.5,0.5">
+                                                            <Border.RenderTransform>
+                                                                <TransformGroup>
+                                                                    <ScaleTransform x:Name="CardScale" ScaleX="1" ScaleY="1" />
+                                                                    <TranslateTransform x:Name="CardTranslate" X="0" Y="0" />
+                                                                </TransformGroup>
+                                                            </Border.RenderTransform>
                                                             <Grid>
                                                                 <Grid.RowDefinitions>
                                                                     <RowDefinition Height="110" />
@@ -527,13 +656,17 @@
                                                                                         Height="22"
                                                                                         HorizontalAlignment="Center"
                                                                                         VerticalAlignment="Center"
-                                                                                        RenderOptions.BitmapScalingMode="LowQuality" />
-                                                                                    <TextBlock
-                                                                                        Text="{Binding Result.DisplayIconGlyph}"
-                                                                                        FontSize="15"
+                                                                                        RenderOptions.BitmapScalingMode="LowQuality"
+                                                                                        Visibility="{Binding Result.HasIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                                                    <Path
+                                                                                        Width="19"
+                                                                                        Height="19"
+                                                                                        Data="{Binding Result.FallbackIconGeometry}"
+                                                                                        Fill="#F3F3F3"
+                                                                                        Stretch="Uniform"
                                                                                         HorizontalAlignment="Center"
                                                                                         VerticalAlignment="Center"
-                                                                                        Foreground="#F3F3F3" />
+                                                                                        Visibility="{Binding Result.ShowsIconPlaceholder, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                                                                 </Grid>
                                                                             </Border>
                                                                         </Grid>
@@ -561,13 +694,84 @@
                                                             </Grid>
                                                         </Border>
                                                         <ControlTemplate.Triggers>
+                                                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetName="CardTranslate" Storyboard.TargetProperty="Y" From="7" To="0" Duration="0:0:0.12">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <CubicEase EasingMode="EaseOut" />
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                        <DoubleAnimation Storyboard.TargetName="CardScale" Storyboard.TargetProperty="ScaleX" From="0.985" To="1" Duration="0:0:0.12">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <CubicEase EasingMode="EaseOut" />
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                        <DoubleAnimation Storyboard.TargetName="CardScale" Storyboard.TargetProperty="ScaleY" From="0.985" To="1" Duration="0:0:0.12">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <CubicEase EasingMode="EaseOut" />
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </EventTrigger>
                                                             <Trigger Property="IsMouseOver" Value="True">
                                                                 <Setter TargetName="Card" Property="BorderBrush" Value="#454545" />
                                                                 <Setter TargetName="Card" Property="Background" Value="#272727" />
+                                                                <Trigger.EnterActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetName="CardTranslate" Storyboard.TargetProperty="Y" To="-2" Duration="0:0:0.08">
+                                                                                <DoubleAnimation.EasingFunction>
+                                                                                    <CubicEase EasingMode="EaseOut" />
+                                                                                </DoubleAnimation.EasingFunction>
+                                                                            </DoubleAnimation>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </Trigger.EnterActions>
+                                                                <Trigger.ExitActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetName="CardTranslate" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.08">
+                                                                                <DoubleAnimation.EasingFunction>
+                                                                                    <CubicEase EasingMode="EaseOut" />
+                                                                                </DoubleAnimation.EasingFunction>
+                                                                            </DoubleAnimation>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </Trigger.ExitActions>
                                                             </Trigger>
                                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                                                 <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
                                                                 <Setter TargetName="Card" Property="Background" Value="#2A2A2A" />
+                                                                <DataTrigger.EnterActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetName="CardScale" Storyboard.TargetProperty="ScaleX" From="0.992" To="1" Duration="0:0:0.1">
+                                                                                <DoubleAnimation.EasingFunction>
+                                                                                    <CubicEase EasingMode="EaseOut" />
+                                                                                </DoubleAnimation.EasingFunction>
+                                                                            </DoubleAnimation>
+                                                                            <DoubleAnimation Storyboard.TargetName="CardScale" Storyboard.TargetProperty="ScaleY" From="0.992" To="1" Duration="0:0:0.1">
+                                                                                <DoubleAnimation.EasingFunction>
+                                                                                    <CubicEase EasingMode="EaseOut" />
+                                                                                </DoubleAnimation.EasingFunction>
+                                                                            </DoubleAnimation>
+                                                                            <DoubleAnimation Storyboard.TargetName="CardTranslate" Storyboard.TargetProperty="Y" To="-3" Duration="0:0:0.1">
+                                                                                <DoubleAnimation.EasingFunction>
+                                                                                    <CubicEase EasingMode="EaseOut" />
+                                                                                </DoubleAnimation.EasingFunction>
+                                                                            </DoubleAnimation>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.EnterActions>
+                                                                <DataTrigger.ExitActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetName="CardTranslate" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.08" />
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.ExitActions>
                                                             </DataTrigger>
                                                         </ControlTemplate.Triggers>
                                                     </ControlTemplate>

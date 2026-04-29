@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Threading;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -10,12 +11,20 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 {
     private readonly MainViewModel _viewModel;
     private Storyboard? _currentStoryboard;
+    private Storyboard? _viewSwitchStoryboard;
+    private int _showAnimationVersion;
 
     public MainWindow(MainViewModel viewModel)
     {
         _viewModel = viewModel;
         DataContext = _viewModel;
         InitializeComponent();
+
+        _viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.ResultsViewMode))
+                Dispatcher.BeginInvoke(AnimateActiveResultsView);
+        };
 
         Deactivated += (_, _) => _viewModel.Hide();
     }
@@ -108,44 +117,62 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         // Position in upper third of primary screen
         var screen = SystemParameters.WorkArea;
+        var targetTop = screen.Height * 0.2 + screen.Top;
         Left = (screen.Width - Width) / 2 + screen.Left;
-        Top = screen.Height * 0.2 + screen.Top;
+        Top = targetTop - 18;
 
         // Cancel any running animation
         _currentStoryboard?.Stop(this);
+        var showAnimationVersion = ++_showAnimationVersion;
 
         // Set initial state
-        Opacity = 0;
-        RootScaleTransform.ScaleX = 0.97;
-        RootScaleTransform.ScaleY = 0.97;
+        Opacity = 0.88;
+        RootGrid.Opacity = 1;
+        RootScaleTransform.ScaleX = 1;
+        RootScaleTransform.ScaleY = 1;
+        RootTranslateTransform.Y = 0;
 
         Show();
         Activate();
         SearchBox.Focus();
 
-        // Animate in
-        var duration = TimeSpan.FromMilliseconds(150);
-        var ease = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+        Dispatcher.BeginInvoke(
+            () => StartShowAnimation(showAnimationVersion, targetTop),
+            DispatcherPriority.Render);
+    }
 
-        var opacityAnim = new DoubleAnimation(0, 1, new Duration(duration)) { EasingFunction = ease };
-        var scaleXAnim = new DoubleAnimation(0.97, 1.0, new Duration(duration)) { EasingFunction = ease };
-        var scaleYAnim = new DoubleAnimation(0.97, 1.0, new Duration(duration)) { EasingFunction = ease };
+    private void StartShowAnimation(int showAnimationVersion, double targetTop)
+    {
+        if (showAnimationVersion != _showAnimationVersion || !_viewModel.IsVisible || !IsVisible)
+            return;
+
+        // Animate in
+        var movementDuration = TimeSpan.FromMilliseconds(240);
+        var opacityDuration = TimeSpan.FromMilliseconds(150);
+        var ease = new QuinticEase { EasingMode = EasingMode.EaseOut };
+
+        var opacityAnim = new DoubleAnimation(Opacity, 1, new Duration(opacityDuration)) { EasingFunction = ease };
+        var topAnim = new DoubleAnimation(Top, targetTop, new Duration(movementDuration)) { EasingFunction = ease };
 
         var storyboard = new Storyboard();
         storyboard.Children.Add(opacityAnim);
-        storyboard.Children.Add(scaleXAnim);
-        storyboard.Children.Add(scaleYAnim);
+        storyboard.Children.Add(topAnim);
 
         Storyboard.SetTarget(opacityAnim, this);
         Storyboard.SetTargetProperty(opacityAnim, new PropertyPath(OpacityProperty));
 
-        Storyboard.SetTarget(scaleXAnim, RootScaleTransform);
-        Storyboard.SetTargetProperty(scaleXAnim, new PropertyPath(ScaleTransform.ScaleXProperty));
-
-        Storyboard.SetTarget(scaleYAnim, RootScaleTransform);
-        Storyboard.SetTargetProperty(scaleYAnim, new PropertyPath(ScaleTransform.ScaleYProperty));
+        Storyboard.SetTarget(topAnim, this);
+        Storyboard.SetTargetProperty(topAnim, new PropertyPath(TopProperty));
 
         _currentStoryboard = storyboard;
+        storyboard.Completed += (_, _) =>
+        {
+            Opacity = 1;
+            Top = targetTop;
+            RootScaleTransform.ScaleX = 1;
+            RootScaleTransform.ScaleY = 1;
+            RootTranslateTransform.Y = 0;
+        };
         storyboard.Begin(this);
     }
 
@@ -153,37 +180,65 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     {
         // Cancel any running animation
         _currentStoryboard?.Stop(this);
+        ++_showAnimationVersion;
 
         var duration = TimeSpan.FromMilliseconds(100);
-        var ease = new QuadraticEase { EasingMode = EasingMode.EaseIn };
+        var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
 
         var opacityAnim = new DoubleAnimation(Opacity, 0, new Duration(duration)) { EasingFunction = ease };
-        var scaleXAnim = new DoubleAnimation(RootScaleTransform.ScaleX, 0.97, new Duration(duration)) { EasingFunction = ease };
-        var scaleYAnim = new DoubleAnimation(RootScaleTransform.ScaleY, 0.97, new Duration(duration)) { EasingFunction = ease };
+        var topAnim = new DoubleAnimation(Top, Top - 8, new Duration(duration)) { EasingFunction = ease };
 
         var storyboard = new Storyboard();
         storyboard.Children.Add(opacityAnim);
-        storyboard.Children.Add(scaleXAnim);
-        storyboard.Children.Add(scaleYAnim);
+        storyboard.Children.Add(topAnim);
 
         Storyboard.SetTarget(opacityAnim, this);
         Storyboard.SetTargetProperty(opacityAnim, new PropertyPath(OpacityProperty));
 
-        Storyboard.SetTarget(scaleXAnim, RootScaleTransform);
-        Storyboard.SetTargetProperty(scaleXAnim, new PropertyPath(ScaleTransform.ScaleXProperty));
-
-        Storyboard.SetTarget(scaleYAnim, RootScaleTransform);
-        Storyboard.SetTargetProperty(scaleYAnim, new PropertyPath(ScaleTransform.ScaleYProperty));
+        Storyboard.SetTarget(topAnim, this);
+        Storyboard.SetTargetProperty(topAnim, new PropertyPath(TopProperty));
 
         storyboard.Completed += (_, _) =>
         {
             Hide();
             Opacity = 1;
+            RootGrid.Opacity = 1;
             RootScaleTransform.ScaleX = 1;
             RootScaleTransform.ScaleY = 1;
+            RootTranslateTransform.Y = 0;
         };
 
         _currentStoryboard = storyboard;
+        storyboard.Begin(this);
+    }
+
+    private void AnimateActiveResultsView()
+    {
+        _viewSwitchStoryboard?.Stop(this);
+
+        var target = _viewModel.IsGridView ? ResultsGrid : ResultsList;
+        var translate = _viewModel.IsGridView ? ResultsGridTranslate : ResultsListTranslate;
+        var startX = _viewModel.IsGridView ? 12 : -12;
+        var duration = TimeSpan.FromMilliseconds(120);
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+        translate.X = startX;
+        target.Opacity = 0.94;
+
+        var translateAnim = new DoubleAnimation(startX, 0, new Duration(duration)) { EasingFunction = ease };
+        var opacityAnim = new DoubleAnimation(0.94, 1, new Duration(duration)) { EasingFunction = ease };
+
+        var storyboard = new Storyboard();
+        storyboard.Children.Add(translateAnim);
+        storyboard.Children.Add(opacityAnim);
+
+        Storyboard.SetTarget(translateAnim, translate);
+        Storyboard.SetTargetProperty(translateAnim, new PropertyPath(TranslateTransform.XProperty));
+
+        Storyboard.SetTarget(opacityAnim, target);
+        Storyboard.SetTargetProperty(opacityAnim, new PropertyPath(OpacityProperty));
+
+        _viewSwitchStoryboard = storyboard;
         storyboard.Begin(this);
     }
 }

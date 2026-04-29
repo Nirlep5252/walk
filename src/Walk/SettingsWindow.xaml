@@ -121,11 +121,14 @@
                                         HorizontalContentAlignment="Left"
                                         Command="{Binding StartRecordingCommand}">
                                         <DockPanel LastChildFill="True">
-                                            <ui:SymbolIcon
+                                            <Path
                                                 DockPanel.Dock="Left"
+                                                Width="22"
+                                                Height="22"
                                                 Margin="0,1,10,0"
-                                                Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
-                                                Symbol="Keyboard24" />
+                                                Data="{x:Static helpers:IconGeometry.Keyboard}"
+                                                Fill="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                                Stretch="Uniform" />
                                             <TextBlock
                                                 FontSize="15"
                                                 FontWeight="SemiBold"
@@ -147,10 +150,12 @@
                                         Command="{Binding ResetHotkeyCommand}"
                                         ToolTip="Reset to Alt+Space"
                                         Visibility="{Binding ShouldShowResetHotkey, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <ui:SymbolIcon
-                                            FontSize="14"
-                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                            Symbol="ArrowCounterclockwise24" />
+                                        <Path
+                                            Width="15"
+                                            Height="15"
+                                            Data="{x:Static helpers:IconGeometry.ArrowClockwise}"
+                                            Fill="{DynamicResource TextFillColorSecondaryBrush}"
+                                            Stretch="Uniform" />
                                     </Button>
                                 </Grid>
                                 <TextBlock

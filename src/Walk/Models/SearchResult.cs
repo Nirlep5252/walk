@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Windows.Media;
+using Walk.Helpers;
 
 namespace Walk.Models;
 
@@ -21,7 +22,14 @@ public sealed class SearchResult : ObservableObject
     public ImageSource? Icon
     {
         get => _icon;
-        set => SetProperty(ref _icon, value);
+        set
+        {
+            if (SetProperty(ref _icon, value))
+            {
+                OnPropertyChanged(nameof(HasIcon));
+                OnPropertyChanged(nameof(ShowsIconPlaceholder));
+            }
+        }
     }
 
     public ImageSource? Preview
@@ -39,6 +47,8 @@ public sealed class SearchResult : ObservableObject
 
     public bool HasPreview => Preview is not null;
     public bool ShowsPreviewPlaceholder => Preview is null;
+    public bool HasIcon => Icon is not null;
+    public bool ShowsIconPlaceholder => Icon is null;
 
     public void SetPreviewLoader(Func<CancellationToken, Task<ImageSource?>> previewLoader)
     {
@@ -96,6 +106,18 @@ public sealed class SearchResult : ObservableObject
     public string DisplayIconGlyph => string.IsNullOrWhiteSpace(IconGlyph)
         ? GetDefaultIconGlyph()
         : IconGlyph!;
+
+    public Geometry FallbackIconGeometry => PluginName switch
+    {
+        "Apps" => IconGeometry.Apps,
+        "Calculator" => IconGeometry.Calculator,
+        "Currency" => IconGeometry.Calculator,
+        "Files" => IconGeometry.Document,
+        "Run" => IconGeometry.WindowApps,
+        "System" => IconGeometry.Settings,
+        "Web" => IconGeometry.GlobeSearch,
+        _ => IconGeometry.Apps,
+    };
 
     private string GetDefaultIconGlyph()
     {
