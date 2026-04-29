@@ -116,17 +116,19 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var receivedUpdate = false;
+            IReadOnlyList<SearchResult> latestResults = [];
             await _router.RouteIncrementalAsync(
                 query,
                 results =>
                 {
                     receivedUpdate = true;
-                    return ApplyResultsAsync(searchVersion, results, token);
+                    latestResults = results.ToList();
+                    return Task.CompletedTask;
                 },
                 token);
 
-            if (!receivedUpdate && !token.IsCancellationRequested && searchVersion == _searchVersion)
-                await ApplyResultsAsync(searchVersion, [], token);
+            if (!token.IsCancellationRequested && searchVersion == _searchVersion)
+                await ApplyResultsAsync(searchVersion, receivedUpdate ? latestResults : [], token);
         }
         catch (OperationCanceledException)
         {
