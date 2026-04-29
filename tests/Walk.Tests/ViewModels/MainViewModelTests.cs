@@ -151,17 +151,47 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public async Task Show_Loads_Up_To_Five_Default_Results()
+    public async Task SearchAsync_Keeps_Existing_Results_While_New_Query_Is_In_Flight()
+    {
+        var plugin = new DelayedPlugin(TimeSpan.FromMilliseconds(250));
+        var viewModel = new MainViewModel(new QueryRouter([plugin]));
+        viewModel.Results.Add(new SearchResult
+        {
+            Title = "Existing",
+            PluginName = "Test",
+            Score = 1.0,
+            Actions = []
+        });
+        viewModel.SelectedIndex = 0;
+
+        viewModel.SearchText = "wait";
+
+        await WaitForAsync(() => viewModel.IsSearching, TimeSpan.FromSeconds(5));
+
+        viewModel.Results.Select(result => result.Title).Should().Contain("Existing");
+        viewModel.SelectedIndex.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Show_Loads_Up_To_Eight_Default_Results()
     {
         var plugin = new BlankResultPlugin(8);
         var viewModel = new MainViewModel(new QueryRouter([plugin]));
 
         viewModel.Show();
 
-        await WaitForAsync(() => viewModel.Results.Count == 5, TimeSpan.FromSeconds(5));
+        await WaitForAsync(() => viewModel.Results.Count == 8, TimeSpan.FromSeconds(5));
         viewModel.Results.Select(result => result.Title)
             .Should()
-            .ContainInOrder("Default 1", "Default 2", "Default 3", "Default 4", "Default 5");
+            .ContainInOrder(
+                "Default 1",
+                "Default 2",
+                "Default 3",
+                "Default 4",
+                "Default 5",
+                "Default 6",
+                "Default 7",
+                "Default 8");
         viewModel.SelectedIndex.Should().Be(0);
     }
 

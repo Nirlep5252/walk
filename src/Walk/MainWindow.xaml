@@ -14,6 +14,8 @@
     Topmost="True"
     ResizeMode="NoResize"
     ExtendsContentIntoTitleBar="True"
+    UseLayoutRounding="True"
+    SnapsToDevicePixels="True"
     WindowBackdropType="Mica"
     WindowCornerPreference="Round">
 
@@ -208,7 +210,7 @@
                 Padding="14,7,14,9"
                 BorderThickness="0,1,0,0"
                 BorderBrush="#0AFFFFFF"
-                Visibility="{Binding Results.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                Visibility="{Binding ShouldShowResultsChrome, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid>
                     <ItemsControl ItemsSource="{Binding VisibleActions}" HorizontalAlignment="Left">
                         <ItemsControl.ItemsPanel>
@@ -298,7 +300,17 @@
                             Orientation="Horizontal"
                             VerticalAlignment="Center"
                             Margin="6,0,0,0"
-                            Visibility="{Binding IsSearching, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            Width="23">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Opacity" Value="0" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSearching}" Value="True">
+                                            <Setter Property="Opacity" Value="1" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
                             <StackPanel.Triggers>
                                 <EventTrigger RoutedEvent="FrameworkElement.Loaded">
                                     <BeginStoryboard Storyboard="{StaticResource SearchDotStoryboard}" />
@@ -331,7 +343,7 @@
                     </StackPanel>
                 </Grid>
 
-                <StackPanel Visibility="{Binding Results.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                <StackPanel Visibility="{Binding ShouldShowResultsChrome, Converter={StaticResource BooleanToVisibilityConverter}}">
 
                     <Rectangle Height="1" Fill="#0AFFFFFF" Margin="14,0" />
 
@@ -339,14 +351,19 @@
                         x:Name="ResultsList"
                         ItemsSource="{Binding Results}"
                         SelectedIndex="{Binding SelectedIndex}"
-                        MaxHeight="420"
+                        Height="420"
                         Margin="4,4,4,4"
                         BorderThickness="0"
                         Background="Transparent"
+                        RenderOptions.BitmapScalingMode="LowQuality"
                         ScrollViewer.CanContentScroll="True"
                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        ScrollViewer.VerticalScrollBarVisibility="Visible"
                         VirtualizingPanel.IsVirtualizing="True"
                         VirtualizingPanel.VirtualizationMode="Recycling"
+                        VirtualizingPanel.ScrollUnit="Pixel"
+                        VirtualizingPanel.CacheLength="1"
+                        VirtualizingPanel.CacheLengthUnit="Page"
                         ItemContainerStyle="{StaticResource ResultItemStyle}"
                         FocusVisualStyle="{x:Null}"
                         Visibility="{Binding IsListView, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -378,7 +395,7 @@
                                             Source="{Binding Icon}"
                                             Width="32"
                                             Height="32"
-                                            RenderOptions.BitmapScalingMode="HighQuality" />
+                                            RenderOptions.BitmapScalingMode="LowQuality" />
                                     </Grid>
 
                                     <StackPanel Grid.Column="1" Margin="14,0,8,0" VerticalAlignment="Center">
@@ -409,16 +426,19 @@
                     <ListBox
                         x:Name="ResultsGrid"
                         ItemsSource="{Binding GridRows}"
-                        MaxHeight="430"
+                        Height="420"
                         Margin="8,8,8,10"
                         BorderThickness="0"
                         Background="Transparent"
+                        RenderOptions.BitmapScalingMode="LowQuality"
                         ScrollViewer.CanContentScroll="True"
                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        ScrollViewer.VerticalScrollBarVisibility="Visible"
                         VirtualizingPanel.IsVirtualizing="True"
                         VirtualizingPanel.VirtualizationMode="Recycling"
                         VirtualizingPanel.ScrollUnit="Pixel"
+                        VirtualizingPanel.CacheLength="1"
+                        VirtualizingPanel.CacheLengthUnit="Page"
                         HorizontalContentAlignment="Stretch"
                         FocusVisualStyle="{x:Null}"
                         Visibility="{Binding IsGridView, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -489,6 +509,7 @@
                                                                         <Image
                                                                             Source="{Binding Result.Preview}"
                                                                             Stretch="Uniform"
+                                                                            RenderOptions.BitmapScalingMode="LowQuality"
                                                                             Visibility="{Binding Result.HasPreview, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                                                                         <Grid Visibility="{Binding Result.ShowsPreviewPlaceholder, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -506,7 +527,7 @@
                                                                                         Height="22"
                                                                                         HorizontalAlignment="Center"
                                                                                         VerticalAlignment="Center"
-                                                                                        RenderOptions.BitmapScalingMode="HighQuality" />
+                                                                                        RenderOptions.BitmapScalingMode="LowQuality" />
                                                                                     <TextBlock
                                                                                         Text="{Binding Result.DisplayIconGlyph}"
                                                                                         FontSize="15"

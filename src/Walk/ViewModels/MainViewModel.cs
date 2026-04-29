@@ -8,7 +8,7 @@ namespace Walk.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
-    private const int DefaultSuggestionCount = 5;
+    private const int DefaultSuggestionCount = 8;
     private const int GridColumnCount = 3;
     private readonly QueryRouter _router;
     private readonly int _maxResults;
@@ -36,6 +36,11 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<SearchAction> VisibleActions { get; } = [];
     public bool IsListView => ResultsViewMode == ResultsViewMode.List;
     public bool IsGridView => ResultsViewMode == ResultsViewMode.Grid;
+    public bool HasResults => Results.Count > 0;
+    public bool ShouldShowResultsChrome =>
+        HasResults ||
+        IsSearching ||
+        !string.IsNullOrWhiteSpace(SearchText);
 
     public SearchResult? SelectedResult =>
         SelectedIndex >= 0 && SelectedIndex < Results.Count
@@ -56,6 +61,8 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSearchTextChanged(string value)
     {
+        NotifyResultsChromeStateChanged();
+
         if (_ignoreNextSearchTextChange)
         {
             _ignoreNextSearchTextChange = false;
@@ -63,6 +70,11 @@ public partial class MainViewModel : ObservableObject
         }
 
         _ = SearchAsync(value);
+    }
+
+    partial void OnIsSearchingChanged(bool value)
+    {
+        NotifyResultsChromeStateChanged();
     }
 
     partial void OnResultsViewModeChanged(ResultsViewMode value)
@@ -99,17 +111,22 @@ public partial class MainViewModel : ObservableObject
             return;
 
         if (searchVersion == _searchVersion)
-        {
-            ApplyResults([]);
             IsSearching = true;
-        }
 
         try
         {
+            var receivedUpdate = false;
             await _router.RouteIncrementalAsync(
                 query,
-                results => ApplyResultsAsync(searchVersion, results, token),
+                results =>
+                {
+                    receivedUpdate = true;
+                    return ApplyResultsAsync(searchVersion, results, token);
+                },
                 token);
+
+            if (!receivedUpdate && !token.IsCancellationRequested && searchVersion == _searchVersion)
+                await ApplyResultsAsync(searchVersion, [], token);
         }
         catch (OperationCanceledException)
         {
@@ -171,6 +188,7 @@ public partial class MainViewModel : ObservableObject
         GridRows.Clear();
         SelectedIndex = -1;
         IsSearching = false;
+        NotifyResultsChromeStateChanged();
         RefreshSelectionState();
         IsVisible = true;
 
@@ -183,6 +201,7 @@ public partial class MainViewModel : ObservableObject
         CancelPendingSearch();
         Interlocked.Increment(ref _searchVersion);
         IsSearching = false;
+        NotifyResultsChromeStateChanged();
         IsVisible = false;
     }
 
@@ -345,6 +364,13 @@ public partial class MainViewModel : ObservableObject
         }
 
         RefreshSelectionState();
+        NotifyResultsChromeStateChanged();
+    }
+
+    private void NotifyResultsChromeStateChanged()
+    {
+        OnPropertyChanged(nameof(HasResults));
+        OnPropertyChanged(nameof(ShouldShowResultsChrome));
     }
 
     private void SyncGridRows(IReadOnlyList<SearchResult> sourceResults)
