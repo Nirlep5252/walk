@@ -209,6 +209,43 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public async Task SearchAsync_Shows_Fast_Incremental_Results_While_Slower_Plugins_Are_Running()
+    {
+        var fastPlugin = new NamedDelayPlugin("App", 0.8, TimeSpan.FromMilliseconds(20));
+        var slowPlugin = new NamedDelayPlugin("File", 0.6, TimeSpan.FromMilliseconds(750));
+        var viewModel = new MainViewModel(new QueryRouter([fastPlugin, slowPlugin]));
+
+        viewModel.SearchText = "note";
+
+        await WaitForAsync(
+            () => viewModel.Results.Select(result => result.Title).SequenceEqual(["App"]),
+            TimeSpan.FromMilliseconds(500));
+
+        viewModel.IsSearching.Should().BeTrue();
+
+        await WaitForAsync(() => viewModel.Results.Count == 2, TimeSpan.FromSeconds(5));
+        viewModel.Results.Select(result => result.Title).Should().ContainInOrder("App", "File");
+    }
+
+    [Fact]
+    public async Task SearchAsync_Shows_Streaming_Batches_Before_Plugin_Completes()
+    {
+        var plugin = new StreamingBatchPlugin();
+        var viewModel = new MainViewModel(new QueryRouter([plugin]));
+
+        viewModel.SearchText = "stream";
+
+        await WaitForAsync(
+            () => viewModel.Results.Select(result => result.Title).SequenceEqual(["Batch 1"]),
+            TimeSpan.FromMilliseconds(500));
+        await WaitForAsync(
+            () => viewModel.Results.Select(result => result.Title).SequenceEqual(["Batch 1", "Batch 2"]),
+            TimeSpan.FromMilliseconds(700));
+
+        viewModel.IsSearching.Should().BeTrue();
+    }
+
+    [Fact]
     public void ResultsViewMode_Defaults_To_List_And_Can_Switch_To_Grid()
     {
         var viewModel = new MainViewModel(new QueryRouter([]));
@@ -388,6 +425,49 @@ public class MainViewModelTests
                     Actions = []
                 }
             ];
+        }
+    }
+
+    private sealed class StreamingBatchPlugin : IIncrementalQueryPlugin
+    {
+        public string Name => "Streaming";
+        public int Priority => 1;
+
+        public Task<IReadOnlyList<SearchResult>> QueryAsync(string query, CancellationToken ct)
+        {
+            return Task.FromResult<IReadOnlyList<SearchResult>>([]);
+        }
+
+        public async Task QueryIncrementalAsync(
+            string query,
+            Func<IReadOnlyList<SearchResult>, Task> onResultsAvailable,
+            CancellationToken ct)
+        {
+            await onResultsAvailable(
+            [
+                new SearchResult
+                {
+                    Title = "Batch 1",
+                    PluginName = "Streaming",
+                    Score = 0.9,
+                    Actions = []
+                }
+            ]);
+
+            await Task.Delay(120, ct);
+
+            await onResultsAvailable(
+            [
+                new SearchResult
+                {
+                    Title = "Batch 2",
+                    PluginName = "Streaming",
+                    Score = 0.8,
+                    Actions = []
+                }
+            ]);
+
+            await Task.Delay(750, ct);
         }
     }
 }

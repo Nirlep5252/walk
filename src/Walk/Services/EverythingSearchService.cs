@@ -1,4 +1,6 @@
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Reflection;
 using System.Text;
 using Walk.Helpers;
 
@@ -280,6 +282,22 @@ public sealed class EverythingSearchService : IFileSearchIndex, IDisposable
 
     private static class EverythingNative
     {
+        static EverythingNative()
+        {
+            NativeLibrary.SetDllImportResolver(typeof(EverythingNative).Assembly, ResolveDllImport);
+        }
+
+        private static IntPtr ResolveDllImport(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
+        {
+            if (!string.Equals(libraryName, "Everything64.dll", StringComparison.OrdinalIgnoreCase))
+                return IntPtr.Zero;
+
+            var libraryPath = Path.Combine(AppContext.BaseDirectory, libraryName);
+            return File.Exists(libraryPath)
+                ? NativeLibrary.Load(libraryPath)
+                : IntPtr.Zero;
+        }
+
         [DefaultDllImportSearchPaths(DllImportSearchPath.ApplicationDirectory)]
         [DllImport("Everything64.dll", CharSet = CharSet.Unicode, EntryPoint = "Everything_SetSearchW")]
         public static extern uint SetSearch(string search);

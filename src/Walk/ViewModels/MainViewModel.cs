@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Walk.Models;
@@ -10,6 +11,7 @@ public partial class MainViewModel : ObservableObject
 {
     private const int DefaultSuggestionCount = 8;
     private const int GridColumnCount = 3;
+    private static readonly TimeSpan SearchUpdateApplyInterval = TimeSpan.FromMilliseconds(50);
     private readonly QueryRouter _router;
     private readonly int _maxResults;
     private CancellationTokenSource? _cts;
@@ -116,19 +118,31 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var receivedUpdate = false;
+            IReadOnlyList<SearchResult>? appliedResults = null;
             IReadOnlyList<SearchResult> latestResults = [];
+            var lastApplyTimestamp = 0L;
             await _router.RouteIncrementalAsync(
                 query,
-                results =>
+                async results =>
                 {
                     receivedUpdate = true;
                     latestResults = results.ToList();
-                    return Task.CompletedTask;
+                    if (appliedResults is null ||
+                        Stopwatch.GetElapsedTime(lastApplyTimestamp) >= SearchUpdateApplyInterval)
+                    {
+                        appliedResults = latestResults;
+                        lastApplyTimestamp = Stopwatch.GetTimestamp();
+                        await ApplyResultsAsync(searchVersion, latestResults, token);
+                    }
                 },
                 token);
 
-            if (!token.IsCancellationRequested && searchVersion == _searchVersion)
+            if (!token.IsCancellationRequested &&
+                searchVersion == _searchVersion &&
+                !ReferenceEquals(appliedResults, latestResults))
+            {
                 await ApplyResultsAsync(searchVersion, receivedUpdate ? latestResults : [], token);
+            }
         }
         catch (OperationCanceledException)
         {
