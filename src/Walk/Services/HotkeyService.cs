@@ -13,10 +13,21 @@ public sealed class HotkeyService : IDisposable
     private const uint MOD_SHIFT = 0x0004;
     private const uint MOD_WIN = 0x0008;
     private const uint MOD_NOREPEAT = 0x4000;
+    private const uint VK_CONTROL = 0x11;
+    private const uint VK_MENU = 0x12;
+    private const uint VK_SHIFT = 0x10;
+    private const uint VK_LWIN = 0x5B;
+    private const uint VK_RWIN = 0x5C;
 
     private HwndSource? _source;
+    private LowLevelKeyboardHook? _keyboardHook;
     private IntPtr _windowHandle;
     private bool _isRegistered;
+    private uint _hookModifierFlags;
+    private uint _hookVirtualKey;
+    private bool _hookHotkeyIsDown;
+    private bool _suppressHookKeyUp;
+    private bool _suppressNextWindowsKeyUp;
 
     public event Action? HotkeyPressed;
 
@@ -54,11 +65,18 @@ public sealed class HotkeyService : IDisposable
 
         if (!RegisterHotKey(_windowHandle, HOTKEY_ID, parsedModifiers | MOD_NOREPEAT, parsedKey))
         {
-            errorMessage = $"Could not register {displayText}. Another application may be using it.";
-            return false;
+            if (!CanUseKeyboardHookFallback(parsedModifiers) ||
+                !TryInstallKeyboardHook(parsedModifiers, parsedKey))
+            {
+                errorMessage = $"Could not register {displayText}. Another application or Windows may be using it.";
+                return false;
+            }
+        }
+        else
+        {
+            _isRegistered = true;
         }
 
-        _isRegistered = true;
         errorMessage = string.Empty;
         return true;
     }
@@ -168,6 +186,106 @@ public sealed class HotkeyService : IDisposable
             UnregisterHotKey(_windowHandle, HOTKEY_ID);
             _isRegistered = false;
         }
+
+        _keyboardHook?.Dispose();
+        _keyboardHook = null;
+        _hookModifierFlags = 0;
+        _hookVirtualKey = 0;
+        _hookHotkeyIsDown = false;
+        _suppressHookKeyUp = false;
+        _suppressNextWindowsKeyUp = false;
+    }
+
+    private bool TryInstallKeyboardHook(uint modifierFlags, uint virtualKey)
+    {
+        _hookModifierFlags = modifierFlags;
+        _hookVirtualKey = virtualKey;
+        _hookHotkeyIsDown = false;
+        _suppressHookKeyUp = false;
+        _suppressNextWindowsKeyUp = false;
+        _keyboardHook = new LowLevelKeyboardHook(HandleKeyboardHookEvent);
+
+        if (_keyboardHook.Install())
+            return true;
+
+        _keyboardHook.Dispose();
+        _keyboardHook = null;
+        _hookModifierFlags = 0;
+        _hookVirtualKey = 0;
+        return false;
+    }
+
+    private bool HandleKeyboardHookEvent(LowLevelKeyboardHook.LowLevelKeyboardEvent keyboardEvent)
+    {
+        if (keyboardEvent.IsKeyUp)
+        {
+            if (_suppressHookKeyUp && keyboardEvent.VirtualKey == _hookVirtualKey)
+            {
+                _suppressHookKeyUp = false;
+                _hookHotkeyIsDown = false;
+                return true;
+            }
+
+            if (_suppressNextWindowsKeyUp && IsWindowsVirtualKey(keyboardEvent.VirtualKey))
+            {
+                _suppressNextWindowsKeyUp = false;
+                return true;
+            }
+
+            if (keyboardEvent.VirtualKey == _hookVirtualKey)
+                _hookHotkeyIsDown = false;
+
+            return false;
+        }
+
+        if (!keyboardEvent.IsKeyDown ||
+            keyboardEvent.VirtualKey != _hookVirtualKey ||
+            GetCurrentModifierFlags() != _hookModifierFlags)
+        {
+            return false;
+        }
+
+        if (!_hookHotkeyIsDown)
+        {
+            _hookHotkeyIsDown = true;
+            _suppressHookKeyUp = true;
+            _suppressNextWindowsKeyUp = (_hookModifierFlags & MOD_WIN) != 0;
+            HotkeyPressed?.Invoke();
+        }
+
+        return true;
+    }
+
+    private static bool CanUseKeyboardHookFallback(uint modifierFlags)
+    {
+        return (modifierFlags & MOD_WIN) != 0;
+    }
+
+    private static uint GetCurrentModifierFlags()
+    {
+        uint modifierFlags = 0;
+
+        if (LowLevelKeyboardHook.IsVirtualKeyDown((int)VK_CONTROL))
+            modifierFlags |= MOD_CTRL;
+
+        if (LowLevelKeyboardHook.IsVirtualKeyDown((int)VK_MENU))
+            modifierFlags |= MOD_ALT;
+
+        if (LowLevelKeyboardHook.IsVirtualKeyDown((int)VK_SHIFT))
+            modifierFlags |= MOD_SHIFT;
+
+        if (LowLevelKeyboardHook.IsVirtualKeyDown((int)VK_LWIN) ||
+            LowLevelKeyboardHook.IsVirtualKeyDown((int)VK_RWIN))
+        {
+            modifierFlags |= MOD_WIN;
+        }
+
+        return modifierFlags;
+    }
+
+    private static bool IsWindowsVirtualKey(uint virtualKey)
+    {
+        return virtualKey is VK_LWIN or VK_RWIN;
     }
 
     private static bool TryNormalizeModifiers(string modifiers, out uint modifierFlags, out string normalizedModifiers)

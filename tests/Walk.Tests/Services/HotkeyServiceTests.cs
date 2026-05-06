@@ -8,6 +8,7 @@ public class HotkeyServiceTests
 {
     [Theory]
     [InlineData("Alt+Ctrl", "space", "Ctrl+Alt+Space")]
+    [InlineData("Win", "space", "Win+Space")]
     [InlineData("Win+Shift", "f12", "Shift+Win+F12")]
     [InlineData("Ctrl", "A", "Ctrl+A")]
     public void TryParseHotkey_NormalizesSupportedCombinations(string modifiers, string key, string displayText)
