@@ -27,7 +27,6 @@ public sealed class HotkeyService : IDisposable
     private uint _hookVirtualKey;
     private bool _hookHotkeyIsDown;
     private bool _suppressHookKeyUp;
-    private bool _suppressNextWindowsKeyUp;
 
     public event Action? HotkeyPressed;
 
@@ -193,7 +192,6 @@ public sealed class HotkeyService : IDisposable
         _hookVirtualKey = 0;
         _hookHotkeyIsDown = false;
         _suppressHookKeyUp = false;
-        _suppressNextWindowsKeyUp = false;
     }
 
     private bool TryInstallKeyboardHook(uint modifierFlags, uint virtualKey)
@@ -202,7 +200,6 @@ public sealed class HotkeyService : IDisposable
         _hookVirtualKey = virtualKey;
         _hookHotkeyIsDown = false;
         _suppressHookKeyUp = false;
-        _suppressNextWindowsKeyUp = false;
         _keyboardHook = new LowLevelKeyboardHook(HandleKeyboardHookEvent);
 
         if (_keyboardHook.Install())
@@ -226,12 +223,6 @@ public sealed class HotkeyService : IDisposable
                 return true;
             }
 
-            if (_suppressNextWindowsKeyUp && IsWindowsVirtualKey(keyboardEvent.VirtualKey))
-            {
-                _suppressNextWindowsKeyUp = false;
-                return true;
-            }
-
             if (keyboardEvent.VirtualKey == _hookVirtualKey)
                 _hookHotkeyIsDown = false;
 
@@ -249,7 +240,9 @@ public sealed class HotkeyService : IDisposable
         {
             _hookHotkeyIsDown = true;
             _suppressHookKeyUp = true;
-            _suppressNextWindowsKeyUp = (_hookModifierFlags & MOD_WIN) != 0;
+            if ((_hookModifierFlags & MOD_WIN) != 0)
+                LowLevelKeyboardHook.PreventStandaloneWindowsKeyActivation();
+
             HotkeyPressed?.Invoke();
         }
 
@@ -281,11 +274,6 @@ public sealed class HotkeyService : IDisposable
         }
 
         return modifierFlags;
-    }
-
-    private static bool IsWindowsVirtualKey(uint virtualKey)
-    {
-        return virtualKey is VK_LWIN or VK_RWIN;
     }
 
     private static bool TryNormalizeModifiers(string modifiers, out uint modifierFlags, out string normalizedModifiers)

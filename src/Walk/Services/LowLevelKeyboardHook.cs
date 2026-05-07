@@ -18,6 +18,8 @@ internal sealed class LowLevelKeyboardHook : IDisposable
     private const int VK_MENU = 0x12;
     private const int VK_LWIN = 0x5B;
     private const int VK_RWIN = 0x5C;
+    private const uint INPUT_KEYBOARD = 1;
+    private const uint KEYEVENTF_KEYUP = 0x0002;
 
     private readonly Func<LowLevelKeyboardEvent, bool> _handleKeyboardEvent;
     private LowLevelKeyboardProc? _hookProc;
@@ -91,6 +93,17 @@ internal sealed class LowLevelKeyboardHook : IDisposable
         return (GetAsyncKeyState(virtualKey) & 0x8000) != 0;
     }
 
+    internal static void PreventStandaloneWindowsKeyActivation()
+    {
+        var inputs = new[]
+        {
+            Input.CreateKeyboard(VK_CONTROL, keyUp: false),
+            Input.CreateKeyboard(VK_CONTROL, keyUp: true),
+        };
+
+        SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>());
+    }
+
     private static bool TryGetMessageState(
         int message,
         out bool isKeyDown,
@@ -139,8 +152,79 @@ internal sealed class LowLevelKeyboardHook : IDisposable
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint SendInput(uint cInputs, Input[] pInputs, int cbSize);
+
     [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Input
+    {
+        public uint Type;
+        public InputUnion Data;
+
+        public static Input CreateKeyboard(uint virtualKey, bool keyUp)
+        {
+            return new Input
+            {
+                Type = INPUT_KEYBOARD,
+                Data = new InputUnion
+                {
+                    Keyboard = new KeyboardInputData
+                    {
+                        VirtualKey = (ushort)virtualKey,
+                        ScanCode = 0,
+                        Flags = keyUp ? KEYEVENTF_KEYUP : 0,
+                        Time = 0,
+                        ExtraInfo = UIntPtr.Zero,
+                    },
+                },
+            };
+        }
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct InputUnion
+    {
+        [FieldOffset(0)]
+        public MouseInputData Mouse;
+
+        [FieldOffset(0)]
+        public KeyboardInputData Keyboard;
+
+        [FieldOffset(0)]
+        public HardwareInputData Hardware;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MouseInputData
+    {
+        public int X;
+        public int Y;
+        public uint MouseData;
+        public uint Flags;
+        public uint Time;
+        public UIntPtr ExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct KeyboardInputData
+    {
+        public ushort VirtualKey;
+        public ushort ScanCode;
+        public uint Flags;
+        public uint Time;
+        public UIntPtr ExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct HardwareInputData
+    {
+        public uint Message;
+        public ushort LowParameter;
+        public ushort HighParameter;
+    }
 
     internal readonly record struct LowLevelKeyboardEvent(
         uint VirtualKey,

@@ -31,6 +31,7 @@ public partial class SettingsWindow : Window
     private LowLevelKeyboardHook? _recordingHook;
     private ModifierKeys _recordingModifiers;
     private bool _recordingHookHandled;
+    private uint _recordedVirtualKey;
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(
@@ -96,7 +97,7 @@ public partial class SettingsWindow : Window
         if (keyboardEvent.IsKeyUp)
         {
             UpdateRecordingModifier(keyboardEvent, isDown: false);
-            return _recordingHookHandled || IsRecordingModifierKey(keyboardEvent);
+            return _recordingHookHandled && keyboardEvent.VirtualKey == _recordedVirtualKey;
         }
 
         if (!keyboardEvent.IsKeyDown)
@@ -117,7 +118,11 @@ public partial class SettingsWindow : Window
         }
 
         _recordingHookHandled = true;
+        _recordedVirtualKey = keyboardEvent.VirtualKey;
         var modifiers = _recordingModifiers | keyboardEvent.ModifierKeys;
+        if (modifiers.HasFlag(ModifierKeys.Windows))
+            LowLevelKeyboardHook.PreventStandaloneWindowsKeyActivation();
+
         Dispatcher.BeginInvoke(() => _viewModel.ApplyRecordedHotkey(modifiers, key));
         return true;
     }
@@ -164,6 +169,7 @@ public partial class SettingsWindow : Window
         StopRecordingHook();
         _recordingModifiers = ModifierKeys.None;
         _recordingHookHandled = false;
+        _recordedVirtualKey = 0;
         _recordingHook = new LowLevelKeyboardHook(OnRecordingHookKey);
         _recordingHook.Install();
     }
@@ -174,6 +180,7 @@ public partial class SettingsWindow : Window
         _recordingHook = null;
         _recordingModifiers = ModifierKeys.None;
         _recordingHookHandled = false;
+        _recordedVirtualKey = 0;
     }
 
     private static bool IsRecordingModifierKey(LowLevelKeyboardHook.LowLevelKeyboardEvent keyboardEvent)
