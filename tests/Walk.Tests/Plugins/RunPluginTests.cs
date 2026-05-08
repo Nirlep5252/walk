@@ -1,5 +1,6 @@
 using System.IO;
 using FluentAssertions;
+using Walk.Helpers;
 using Walk.Models;
 using Walk.Plugins;
 using Walk.Services;
@@ -120,6 +121,22 @@ public class RunPluginTests : IDisposable
     }
 
     [Fact]
+    public async Task Execute_PowerShell_Catalog_Target_Uses_User_Profile_WorkingDirectory()
+    {
+        var expectedWorkingDirectory = RunTargetWorkingDirectory.GetDefaultPowerShellDirectory();
+        expectedWorkingDirectory.Should().NotBeNullOrWhiteSpace();
+
+        var results = await _plugin.QueryAsync("powershell", CancellationToken.None);
+        var result = results.Single(searchResult => searchResult.Title == "PowerShell");
+
+        result.Actions[0].Execute();
+
+        _launcher.Launched.Should().ContainSingle();
+        _launcher.Launched[0].command.Should().Be("powershell");
+        _launcher.Launched[0].workingDirectory.Should().Be(expectedWorkingDirectory);
+    }
+
+    [Fact]
     public async Task QueryAsync_Normalizes_Mistyped_Shell_ControlPanel_Target()
     {
         var results = await _plugin.QueryAsync("shell:main.cpl", CancellationToken.None);
@@ -171,12 +188,12 @@ public class RunPluginTests : IDisposable
 
     private sealed class FakeRunTargetLauncher : IRunTargetLauncher
     {
-        public List<(string command, bool asAdmin)> Launched { get; } = [];
+        public List<(string command, bool asAdmin, string? workingDirectory)> Launched { get; } = [];
         public List<string> OpenedLocations { get; } = [];
 
         public void Launch(RunTarget target, bool asAdmin)
         {
-            Launched.Add((target.Command, asAdmin));
+            Launched.Add((target.Command, asAdmin, target.WorkingDirectory));
         }
 
         public void OpenFileLocation(string path)

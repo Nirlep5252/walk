@@ -8,4 +8,5 @@ public sealed class RunTarget
     public string Kind { get; init; } = "Command";
     public bool SupportsRunAsAdmin { get; init; }
     public string? FileLocationPath { get; init; }
+    public string? WorkingDirectory { get; init; }
 }

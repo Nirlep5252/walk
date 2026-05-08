@@ -8,6 +8,7 @@ public sealed class RunHistoryEntry
     public string Kind { get; set; } = "Command";
     public bool SupportsRunAsAdmin { get; set; }
     public string? FileLocationPath { get; set; }
+    public string? WorkingDirectory { get; set; }
     public string? LastQuery { get; set; }
     public int LaunchCount { get; set; }
     public DateTime LastUsedUtc { get; set; }
@@ -22,6 +23,7 @@ public sealed class RunHistoryEntry
             Kind = Kind,
             SupportsRunAsAdmin = SupportsRunAsAdmin,
             FileLocationPath = FileLocationPath,
+            WorkingDirectory = WorkingDirectory,
         };
     }
 }

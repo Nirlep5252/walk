@@ -40,6 +40,7 @@ public class RunHistoryServiceTests : IDisposable
             Subtitle = "Manage Windows services",
             Kind = "MMC",
             SupportsRunAsAdmin = true,
+            WorkingDirectory = _testDir,
         };
 
         service.RecordLaunch("services", target);
@@ -54,5 +55,6 @@ public class RunHistoryServiceTests : IDisposable
         entries[0].LaunchCount.Should().Be(2);
         entries[0].LastQuery.Should().Be("serv");
         entries[0].SupportsRunAsAdmin.Should().BeTrue();
+        entries[0].WorkingDirectory.Should().Be(_testDir);
     }
 }

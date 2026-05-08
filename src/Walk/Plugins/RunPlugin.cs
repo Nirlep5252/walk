@@ -19,8 +19,8 @@ public sealed class RunPlugin : IQueryPlugin
     private static readonly IReadOnlyList<RunTarget> Catalog =
     [
         new() { Title = "Command Prompt", Command = "cmd", Subtitle = "Open cmd.exe", Kind = "Command", SupportsRunAsAdmin = true },
-        new() { Title = "PowerShell", Command = "powershell", Subtitle = "Open Windows PowerShell", Kind = "Command", SupportsRunAsAdmin = true },
-        new() { Title = "PowerShell 7", Command = "pwsh", Subtitle = "Open PowerShell 7 if installed", Kind = "Command", SupportsRunAsAdmin = true },
+        new() { Title = "PowerShell", Command = "powershell", Subtitle = "Open Windows PowerShell", Kind = "Command", SupportsRunAsAdmin = true, WorkingDirectory = RunTargetWorkingDirectory.GetDefaultPowerShellDirectory() },
+        new() { Title = "PowerShell 7", Command = "pwsh", Subtitle = "Open PowerShell 7 if installed", Kind = "Command", SupportsRunAsAdmin = true, WorkingDirectory = RunTargetWorkingDirectory.GetDefaultPowerShellDirectory() },
         new() { Title = "Registry Editor", Command = "regedit", Subtitle = "Edit the Windows registry", Kind = "Command", SupportsRunAsAdmin = true },
         new() { Title = "Task Manager", Command = "taskmgr", Subtitle = "Open Task Manager", Kind = "Command", SupportsRunAsAdmin = true },
         new() { Title = "System Configuration", Command = "msconfig", Subtitle = "Open system startup and boot settings", Kind = "Command", SupportsRunAsAdmin = true },

@@ -52,6 +52,7 @@ public sealed class RunHistoryService
             existing.Kind = target.Kind;
             existing.SupportsRunAsAdmin = target.SupportsRunAsAdmin;
             existing.FileLocationPath = target.FileLocationPath;
+            existing.WorkingDirectory = target.WorkingDirectory;
             existing.LastQuery = string.IsNullOrWhiteSpace(query) ? existing.LastQuery : query.Trim();
             existing.LaunchCount++;
             existing.LastUsedUtc = DateTime.UtcNow;
@@ -111,6 +112,7 @@ public sealed class RunHistoryService
             Kind = entry.Kind,
             SupportsRunAsAdmin = entry.SupportsRunAsAdmin,
             FileLocationPath = entry.FileLocationPath,
+            WorkingDirectory = entry.WorkingDirectory,
             LastQuery = entry.LastQuery,
             LaunchCount = entry.LaunchCount,
             LastUsedUtc = entry.LastUsedUtc,

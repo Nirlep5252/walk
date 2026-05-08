@@ -53,6 +53,13 @@ public static class ProcessHelper
             return expandedConfiguredWorkingDirectory!;
         }
 
+        var defaultWorkingDirectory = RunTargetWorkingDirectory.GetDefaultDirectoryForCommand(path);
+        if (!string.IsNullOrWhiteSpace(defaultWorkingDirectory) &&
+            Directory.Exists(defaultWorkingDirectory))
+        {
+            return defaultWorkingDirectory;
+        }
+
         var executableDirectory = Path.GetDirectoryName(path);
         if (!string.IsNullOrWhiteSpace(executableDirectory) &&
             Directory.Exists(executableDirectory))

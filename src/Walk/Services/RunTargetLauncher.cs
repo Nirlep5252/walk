@@ -19,6 +19,10 @@ public sealed class RunTargetLauncher : IRunTargetLauncher
         if (asAdmin)
             startInfo.Verb = "runas";
 
+        var workingDirectory = RunTargetWorkingDirectory.Resolve(target);
+        if (!string.IsNullOrWhiteSpace(workingDirectory))
+            startInfo.WorkingDirectory = workingDirectory;
+
         Process.Start(startInfo);
     }
 
