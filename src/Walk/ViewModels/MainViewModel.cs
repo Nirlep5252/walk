@@ -249,9 +249,16 @@ public partial class MainViewModel : ObservableObject
         if (action is null)
             return false;
 
+        var selectedResultIdentity = SelectedResult is null ? null : GetResultIdentity(SelectedResult);
         var executed = TryExecuteAction(action);
         if (executed && action.ClosesLauncher)
+        {
             Hide();
+        }
+        else if (executed && action.RefreshesResults)
+        {
+            _ = RefreshCurrentResultsAsync(selectedResultIdentity);
+        }
 
         return true;
     }
@@ -326,7 +333,11 @@ public partial class MainViewModel : ObservableObject
             }).Task;
     }
 
-    private async Task LoadDefaultResultsAsync(int searchVersion, CancellationToken token, bool clearWhenEmpty)
+    private async Task LoadDefaultResultsAsync(
+        int searchVersion,
+        CancellationToken token,
+        bool clearWhenEmpty,
+        string? preferredResultIdentity = null)
     {
         IReadOnlyList<SearchResult> defaultResults = [];
         try
@@ -343,10 +354,78 @@ public partial class MainViewModel : ObservableObject
 
         var visibleResults = defaultResults.Take(DefaultSuggestionCount).ToList();
         if (visibleResults.Count > 0 || clearWhenEmpty)
-            ApplyResults(visibleResults);
+            ApplyResults(visibleResults, preferredResultIdentity);
     }
 
-    private void ApplyResults(IReadOnlyList<SearchResult> results)
+    private async Task RefreshCurrentResultsAsync(string? preferredResultIdentity)
+    {
+        if (!IsVisible)
+            return;
+
+        CancelPendingSearch();
+        var searchVersion = Interlocked.Increment(ref _searchVersion);
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
+        var query = SearchText;
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            await LoadDefaultResultsAsync(searchVersion, token, clearWhenEmpty: true, preferredResultIdentity);
+            IsSearching = false;
+            return;
+        }
+
+        IsSearching = true;
+        try
+        {
+            IReadOnlyList<SearchResult> latestResults = [];
+            await _router.RouteIncrementalAsync(
+                query,
+                async results =>
+                {
+                    latestResults = results.ToList();
+                    await ApplyResultsAsync(searchVersion, latestResults, token, preferredResultIdentity);
+                },
+                token);
+
+            if (!token.IsCancellationRequested && searchVersion == _searchVersion)
+                await ApplyResultsAsync(searchVersion, latestResults, token, preferredResultIdentity);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            if (searchVersion == _searchVersion)
+                IsSearching = false;
+        }
+    }
+
+    private Task ApplyResultsAsync(
+        int searchVersion,
+        IReadOnlyList<SearchResult> results,
+        CancellationToken token,
+        string? preferredResultIdentity)
+    {
+        if (token.IsCancellationRequested || searchVersion != _searchVersion)
+            return Task.CompletedTask;
+
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess())
+        {
+            ApplyResults(results, preferredResultIdentity);
+            return Task.CompletedTask;
+        }
+
+        return dispatcher.InvokeAsync(
+            () =>
+            {
+                if (!token.IsCancellationRequested && searchVersion == _searchVersion)
+                    ApplyResults(results, preferredResultIdentity);
+            }).Task;
+    }
+
+    private void ApplyResults(IReadOnlyList<SearchResult> results, string? preferredResultIdentity = null)
     {
         var newResults = _maxResults > 0
             ? results.Take(_maxResults).ToList()
@@ -370,7 +449,18 @@ public partial class MainViewModel : ObservableObject
 
         SyncGridRows(newResults);
 
-        if (Results.Count == 0)
+        if (!string.IsNullOrWhiteSpace(preferredResultIdentity))
+        {
+            var preferredIndex = newResults.FindIndex(result =>
+                string.Equals(GetResultIdentity(result), preferredResultIdentity, StringComparison.Ordinal));
+            if (preferredIndex >= 0)
+                SelectedIndex = preferredIndex;
+            else if (Results.Count == 0)
+                SelectedIndex = -1;
+            else if (SelectedIndex < 0 || SelectedIndex >= Results.Count)
+                SelectedIndex = Math.Clamp(SelectedIndex, 0, Results.Count - 1);
+        }
+        else if (Results.Count == 0)
         {
             SelectedIndex = -1;
         }
@@ -381,6 +471,11 @@ public partial class MainViewModel : ObservableObject
 
         RefreshSelectionState();
         NotifyResultsChromeStateChanged();
+    }
+
+    private static string GetResultIdentity(SearchResult result)
+    {
+        return string.Join('\u001F', result.PluginName, result.Title, result.Subtitle ?? "");
     }
 
     private void NotifyResultsChromeStateChanged()

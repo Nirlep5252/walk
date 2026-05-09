@@ -13,6 +13,7 @@ public sealed partial class FileSearchPlugin : IIncrementalQueryPlugin
     private const int MaxCandidateDirectories = 6;
     private const int PublishBatchSize = 16;
     private readonly IFileSearchIndex? _searchIndex;
+    private readonly FavoriteService? _favoriteService;
     private static readonly HashSet<string> PreviewableExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".avif",
@@ -40,9 +41,10 @@ public sealed partial class FileSearchPlugin : IIncrementalQueryPlugin
     [GeneratedRegex(@"^[A-Za-z]:\\|^\\\\|^\\[A-Za-z]")]
     private static partial Regex PathPattern();
 
-    public FileSearchPlugin(IFileSearchIndex? searchIndex = null)
+    public FileSearchPlugin(IFileSearchIndex? searchIndex = null, FavoriteService? favoriteService = null)
     {
         _searchIndex = searchIndex;
+        _favoriteService = favoriteService;
     }
 
     public async Task<IReadOnlyList<SearchResult>> QueryAsync(string query, CancellationToken ct)
@@ -131,7 +133,7 @@ public sealed partial class FileSearchPlugin : IIncrementalQueryPlugin
             await onResultsAvailable(pendingBatch.ToList()).ConfigureAwait(false);
     }
 
-    private static IReadOnlyList<SearchResult> CreateIndexedResults(IReadOnlyList<FileSearchIndexEntry> entries)
+    private IReadOnlyList<SearchResult> CreateIndexedResults(IReadOnlyList<FileSearchIndexEntry> entries)
     {
         var results = new List<SearchResult>(entries.Count);
         for (int index = 0; index < entries.Count; index++)
@@ -147,9 +149,38 @@ public sealed partial class FileSearchPlugin : IIncrementalQueryPlugin
         return results;
     }
 
-    private static SearchResult CreateResult(string entry, double score = 0.7)
+    private SearchResult CreateResult(string entry, double score = 0.7)
     {
         var isDirectory = Directory.Exists(entry);
+        var actions = new List<SearchAction>
+        {
+            new()
+            {
+                Label = "Open",
+                HintLabel = "Open",
+                Execute = () => Process.Start(new ProcessStartInfo(entry) { UseShellExecute = true }),
+                KeyGesture = "Enter"
+            },
+            new()
+            {
+                Label = "Open Containing Folder",
+                HintLabel = "Reveal",
+                Execute = () => ProcessHelper.OpenFileLocation(entry),
+                KeyGesture = "Ctrl+O"
+            },
+            new()
+            {
+                Label = "Copy Path",
+                HintLabel = "Copy",
+                Execute = () => System.Windows.Clipboard.SetText(entry),
+                KeyGesture = "Ctrl+C",
+                ClosesLauncher = false
+            }
+        };
+
+        if (_favoriteService is not null)
+            actions.Add(FavoriteService.CreateToggleAction(_favoriteService, FavoriteService.FromFile(entry)));
+
         var result = new SearchResult
         {
             Title = GetDisplayName(entry),
@@ -157,31 +188,7 @@ public sealed partial class FileSearchPlugin : IIncrementalQueryPlugin
             PluginName = "Files",
             Score = score,
             IconGlyph = isDirectory ? "\uD83D\uDCC1" : "\uD83D\uDCC4",
-            Actions =
-            [
-                new SearchAction
-                {
-                    Label = "Open",
-                    HintLabel = "Open",
-                    Execute = () => Process.Start(new ProcessStartInfo(entry) { UseShellExecute = true }),
-                    KeyGesture = "Enter"
-                },
-                new SearchAction
-                {
-                    Label = "Open Containing Folder",
-                    HintLabel = "Reveal",
-                    Execute = () => ProcessHelper.OpenFileLocation(entry),
-                    KeyGesture = "Ctrl+O"
-                },
-                new SearchAction
-                {
-                    Label = "Copy Path",
-                    HintLabel = "Copy",
-                    Execute = () => System.Windows.Clipboard.SetText(entry),
-                    KeyGesture = "Ctrl+C",
-                    ClosesLauncher = false
-                }
-            ]
+            Actions = actions,
         };
 
         if (!isDirectory && ShouldLoadThumbnail(entry))

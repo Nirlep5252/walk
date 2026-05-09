@@ -69,6 +69,22 @@ public sealed class QuickLinkPluginTests : IDisposable
     }
 
     [Fact]
+    public async Task Pin_Action_Adds_Resolved_Quicklink_To_Favorites()
+    {
+        var favoriteService = new FavoriteService(_testDir);
+        var plugin = new QuickLinkPlugin(_service, favoriteService);
+
+        var results = await plugin.QueryAsync("gh walk launcher", CancellationToken.None);
+        var pinAction = results[0].Actions.Single(action => action.KeyGesture == "Ctrl+P");
+
+        pinAction.Execute();
+
+        favoriteService.GetEntries().Should().ContainSingle(entry =>
+            entry.Kind == Walk.Models.FavoriteKind.QuickLink &&
+            entry.Target == "https://github.com/search?q=walk%20launcher");
+    }
+
+    [Fact]
     public async Task QueryAsync_Adds_Custom_Quicklink()
     {
         var results = await _plugin.QueryAsync("ql add Walk Repo = https://github.com/Nirlep5252/walk", CancellationToken.None);

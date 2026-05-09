@@ -1,5 +1,7 @@
 using System.IO;
+using System.Text.Json;
 using FluentAssertions;
+using Walk.Models;
 using Walk.Plugins;
 using Walk.Services;
 
@@ -53,5 +55,40 @@ public class CurrencyPluginTests : IDisposable
     {
         var plugin = new CurrencyPlugin(_cache, TimeSpan.FromHours(6));
         plugin.Priority.Should().BeGreaterThanOrEqualTo(85);
+    }
+
+    [Fact]
+    public async Task Pin_Action_Adds_Currency_Conversion_To_Favorites()
+    {
+        await WriteCachedRatesAsync("USD", new Dictionary<string, decimal> { ["EUR"] = 0.9m });
+        var favoriteService = new FavoriteService(_testDir);
+        var plugin = new CurrencyPlugin(_cache, TimeSpan.FromHours(6), favoriteService);
+
+        var results = await plugin.QueryAsync("100 USD to EUR", CancellationToken.None);
+        var pinAction = results[0].Actions.Single(action => action.KeyGesture == "Ctrl+P");
+
+        pinAction.Execute();
+
+        favoriteService.GetEntries().Should().ContainSingle(entry =>
+            entry.Kind == FavoriteKind.Currency &&
+            entry.Target == "100 USD to EUR" &&
+            entry.Title == "100 USD to EUR" &&
+            entry.Arguments == null);
+    }
+
+    private async Task WriteCachedRatesAsync(string baseCurrency, Dictionary<string, decimal> rates)
+    {
+        var cacheEntry = new
+        {
+            Data = new CurrencyPlugin.ExchangeRateData
+            {
+                BaseCurrency = baseCurrency,
+                Rates = rates,
+            },
+            FetchedAt = DateTime.UtcNow,
+        };
+
+        var json = JsonSerializer.Serialize(cacheEntry);
+        await File.WriteAllTextAsync(Path.Combine(_testDir, $"currency_{baseCurrency}.json"), json);
     }
 }

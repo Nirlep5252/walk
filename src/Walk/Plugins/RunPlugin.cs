@@ -13,6 +13,7 @@ public sealed class RunPlugin : IQueryPlugin
 
     private readonly RunHistoryService _historyService;
     private readonly IRunTargetLauncher _launcher;
+    private readonly FavoriteService? _favoriteService;
 
     private sealed record RunCandidate(RunTarget Target, double Score, string Source);
 
@@ -68,10 +69,14 @@ public sealed class RunPlugin : IQueryPlugin
         new() { Title = "Personalization", Command = "ms-settings:personalization", Subtitle = "Open personalization settings", Kind = "Settings URI" },
     ];
 
-    public RunPlugin(RunHistoryService historyService, IRunTargetLauncher? launcher = null)
+    public RunPlugin(
+        RunHistoryService historyService,
+        IRunTargetLauncher? launcher = null,
+        FavoriteService? favoriteService = null)
     {
         _historyService = historyService;
         _launcher = launcher ?? new RunTargetLauncher();
+        _favoriteService = favoriteService;
     }
 
     public string Name => "Run";
@@ -224,6 +229,9 @@ public sealed class RunPlugin : IQueryPlugin
                 KeyGesture = "Ctrl+O",
             });
         }
+
+        if (_favoriteService is not null)
+            actions.Add(FavoriteService.CreateToggleAction(_favoriteService, FavoriteService.FromRunTarget(target)));
 
         var subtitle = candidate.Source == "History"
             ? $"Recent {target.Kind.ToLowerInvariant()} - {target.Command}"

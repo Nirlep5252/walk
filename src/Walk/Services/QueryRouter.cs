@@ -188,6 +188,7 @@ public sealed class QueryRouter
         {
             "Clipboard" => 0,
             "Emoji" => 0,
+            "Favorites" => 0,
             "Quicklinks" => 0,
             "Apps" => 1,
             "Web" => 2,

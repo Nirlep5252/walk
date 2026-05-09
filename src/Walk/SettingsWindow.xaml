@@ -218,6 +218,31 @@
                             <StackPanel Grid.Column="0" Margin="0,0,20,0">
                                 <TextBlock
                                     Style="{StaticResource RowTitle}"
+                                    Text="Favorites" />
+                                <TextBlock
+                                    Style="{StaticResource RowDescription}"
+                                    Text="Pin frequently used apps, commands, files, quicklinks, and clipboard items to the launcher." />
+                            </StackPanel>
+
+                            <ui:ToggleSwitch
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding FavoritesEnabled}"
+                                OffContent="Off"
+                                OnContent="On" />
+                        </Grid>
+
+                        <Rectangle Style="{StaticResource RowDivider}" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                                <TextBlock
+                                    Style="{StaticResource RowTitle}"
                                     Text="Quicklinks" />
                                 <TextBlock
                                     Style="{StaticResource RowDescription}"

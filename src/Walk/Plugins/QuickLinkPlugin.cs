@@ -9,10 +9,12 @@ public sealed partial class QuickLinkPlugin : IQueryPlugin
 {
     private const int MaxResults = 20;
     private readonly QuickLinkService _quickLinkService;
+    private readonly FavoriteService? _favoriteService;
 
-    public QuickLinkPlugin(QuickLinkService quickLinkService)
+    public QuickLinkPlugin(QuickLinkService quickLinkService, FavoriteService? favoriteService = null)
     {
         _quickLinkService = quickLinkService;
+        _favoriteService = favoriteService;
     }
 
     public string Name => "Quicklinks";
@@ -152,6 +154,35 @@ public sealed partial class QuickLinkPlugin : IQueryPlugin
         var title = entry.RequiresQuery && parameter.Length > 0
             ? $"Open {entry.Name} for {parameter}"
             : $"Open {entry.Name}";
+        var actions = new List<SearchAction>
+        {
+            new()
+            {
+                Label = "Open Quicklink",
+                HintLabel = "Open",
+                Execute = () => _quickLinkService.Launch(entry.Id, parameter),
+                KeyGesture = "Enter",
+            },
+            new()
+            {
+                Label = "Copy Target",
+                HintLabel = "Copy",
+                Execute = () => WpfClipboard.SetText(resolvedTarget),
+                KeyGesture = "Ctrl+C",
+                ClosesLauncher = false,
+            },
+        };
+
+        if (_favoriteService is not null)
+            actions.Add(FavoriteService.CreateToggleAction(_favoriteService, FavoriteService.FromQuickLink(entry, resolvedTarget)));
+
+        actions.Add(new SearchAction
+        {
+            Label = "Delete Quicklink",
+            HintLabel = "Delete",
+            Execute = () => _quickLinkService.Remove(entry.Id),
+            KeyGesture = "Ctrl+X",
+        });
 
         return new SearchResult
         {
@@ -160,31 +191,7 @@ public sealed partial class QuickLinkPlugin : IQueryPlugin
             PluginName = Name,
             Score = isAliasMatch ? 0.995 : entry.UseCount > 0 ? 0.9 : 0.78,
             IconGlyph = "\u2197",
-            Actions =
-            [
-                new SearchAction
-                {
-                    Label = "Open Quicklink",
-                    HintLabel = "Open",
-                    Execute = () => _quickLinkService.Launch(entry.Id, parameter),
-                    KeyGesture = "Enter",
-                },
-                new SearchAction
-                {
-                    Label = "Copy Target",
-                    HintLabel = "Copy",
-                    Execute = () => WpfClipboard.SetText(resolvedTarget),
-                    KeyGesture = "Ctrl+C",
-                    ClosesLauncher = false,
-                },
-                new SearchAction
-                {
-                    Label = "Delete Quicklink",
-                    HintLabel = "Delete",
-                    Execute = () => _quickLinkService.Remove(entry.Id),
-                    KeyGesture = "Ctrl+X",
-                },
-            ],
+            Actions = actions,
         };
     }
 

@@ -206,6 +206,31 @@ public class QueryRouterTests
     }
 
     [Fact]
+    public async Task RouteAsync_Prioritizes_Favorite_Result_Before_Web_Result()
+    {
+        var favoritePlugin = Substitute.For<IQueryPlugin>();
+        favoritePlugin.Name.Returns("Favorites");
+        favoritePlugin.Priority.Returns(1);
+        favoritePlugin.QueryAsync("fav terminal", Arg.Any<CancellationToken>())
+            .Returns([
+                new SearchResult { Title = "Terminal", Score = 0.8, PluginName = "Favorites", Actions = [] }
+            ]);
+
+        var webPlugin = Substitute.For<IQueryPlugin>();
+        webPlugin.Name.Returns("Web");
+        webPlugin.Priority.Returns(1);
+        webPlugin.QueryAsync("fav terminal", Arg.Any<CancellationToken>())
+            .Returns([
+                new SearchResult { Title = "Search the web", Score = 0.0, PluginName = "Web", Actions = [] }
+            ]);
+
+        var router = new QueryRouter([favoritePlugin, webPlugin]);
+        var results = await router.RouteAsync("fav terminal", CancellationToken.None);
+
+        results.Select(result => result.PluginName).Should().ContainInOrder("Favorites", "Web");
+    }
+
+    [Fact]
     public async Task RouteAsync_Handles_Plugin_Exception_Gracefully()
     {
         var faultyPlugin = Substitute.For<IQueryPlugin>();

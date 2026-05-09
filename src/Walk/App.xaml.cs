@@ -37,6 +37,8 @@ public partial class App : System.Windows.Application
     private ClipboardHistoryService? _clipboardHistoryService;
     private TwemojiImageService? _twemojiImageService;
     private QuickLinkService? _quickLinkService;
+    private FavoriteService? _favoriteService;
+    private CurrencyConversionService? _currencyConversionService;
 
     public App()
     {
@@ -62,6 +64,9 @@ public partial class App : System.Windows.Application
 
         // Services
         _cacheService = new CacheService(dataDir);
+        _currencyConversionService = new CurrencyConversionService(
+            _cacheService,
+            () => TimeSpan.FromHours(_settings.CurrencyCacheTtlHours));
         _indexService = new AppIndexService(dataDir);
         _changelogService = new ChangelogService(dataDir);
         _updateService = new UpdateService(_changelogService);
@@ -69,6 +74,7 @@ public partial class App : System.Windows.Application
         _clipboardHistoryService = new ClipboardHistoryService(dataDir);
         _twemojiImageService = new TwemojiImageService(dataDir);
         _quickLinkService = new QuickLinkService(dataDir);
+        _favoriteService = new FavoriteService(dataDir, currencyConversionService: _currencyConversionService);
         _everythingRuntime = new EverythingBundledRuntime(dataDir);
         _everythingSearchService = new EverythingSearchService(_everythingRuntime);
         _defaultBrowserService = new DefaultBrowserService();
@@ -432,37 +438,42 @@ public partial class App : System.Windows.Application
 
         var plugins = new List<IQueryPlugin>();
 
+        var activeFavoriteService = settings.EnableFavorites ? _favoriteService : null;
+
+        if (activeFavoriteService is not null)
+            plugins.Add(new FavoritePlugin(activeFavoriteService, _indexService, _currencyConversionService));
+
         if (settings.EnableCalculator)
             plugins.Add(new CalculatorPlugin());
 
         if (settings.EnableCurrencyConverter)
         {
-            plugins.Add(new CurrencyPlugin(
-                _cacheService,
-                TimeSpan.FromHours(settings.CurrencyCacheTtlHours)));
+            plugins.Add(_currencyConversionService is not null
+                ? new CurrencyPlugin(_currencyConversionService, activeFavoriteService)
+                : new CurrencyPlugin(_cacheService, TimeSpan.FromHours(settings.CurrencyCacheTtlHours), activeFavoriteService));
         }
 
         if (settings.EnableSystemCommands)
-            plugins.Add(new SystemCommandPlugin());
+            plugins.Add(new SystemCommandPlugin(activeFavoriteService));
 
         if (settings.EnableRunner)
-            plugins.Add(new RunPlugin(_runHistoryService));
+            plugins.Add(new RunPlugin(_runHistoryService, favoriteService: activeFavoriteService));
 
         if (settings.EnableClipboardHistory && _clipboardHistoryService is not null)
-            plugins.Add(new ClipboardHistoryPlugin(_clipboardHistoryService));
+            plugins.Add(new ClipboardHistoryPlugin(_clipboardHistoryService, activeFavoriteService));
 
         if (settings.EnableEmojiSymbols)
             plugins.Add(new EmojiSymbolPlugin(_twemojiImageService));
 
         if (settings.EnableQuickLinks && _quickLinkService is not null)
-            plugins.Add(new QuickLinkPlugin(_quickLinkService));
+            plugins.Add(new QuickLinkPlugin(_quickLinkService, activeFavoriteService));
 
-        plugins.Add(new AppSearchPlugin(_indexService));
+        plugins.Add(new AppSearchPlugin(_indexService, activeFavoriteService));
         if (_defaultBrowserService is not null)
             plugins.Add(new WebSearchPlugin(_defaultBrowserService));
 
         if (settings.EnableFileSearch)
-            plugins.Add(new FileSearchPlugin(_everythingSearchService));
+            plugins.Add(new FileSearchPlugin(_everythingSearchService, activeFavoriteService));
 
         return plugins;
     }

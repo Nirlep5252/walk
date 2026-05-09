@@ -7,6 +7,7 @@ public sealed class SearchAction
     public required Action Execute { get; init; }
     public string? KeyGesture { get; init; }
     public bool ClosesLauncher { get; init; } = true;
+    public bool RefreshesResults { get; init; }
 
     public string DisplayLabel => string.IsNullOrWhiteSpace(HintLabel) ? Label : HintLabel!;
 

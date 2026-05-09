@@ -97,6 +97,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         if (modifiers == ModifierKeys.Control && key is >= Key.A and <= Key.Z)
             return $"Ctrl+{key.ToString().ToUpperInvariant()}";
 
+        if (modifiers == ModifierKeys.Control && key is Key.Up or Key.Down)
+            return $"Ctrl+{key}";
+
         return null;
     }
 

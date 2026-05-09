@@ -91,6 +91,24 @@ public sealed class ClipboardHistoryPluginTests : IDisposable
         _service.GetEntries().Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task Pin_Action_Adds_Clipboard_Item_To_Favorites()
+    {
+        var favoriteService = new FavoriteService(_testDir);
+        var plugin = new ClipboardHistoryPlugin(_service, favoriteService);
+        _service.RecordText("favorite clipboard text");
+
+        var results = await plugin.QueryAsync("clip favorite", CancellationToken.None);
+        var pinAction = results[0].Actions.Single(action => action.KeyGesture == "Ctrl+P");
+
+        pinAction.Execute();
+
+        favoriteService.GetEntries().Should().ContainSingle(entry =>
+            entry.Kind == FavoriteKind.ClipboardText &&
+            entry.Target == "favorite clipboard text");
+        results[0].Actions.Should().Contain(action => action.KeyGesture == "Ctrl+K");
+    }
+
     private static BitmapSource CreateBitmap()
     {
         const int width = 2;

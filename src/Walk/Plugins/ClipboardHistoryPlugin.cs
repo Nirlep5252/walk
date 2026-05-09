@@ -10,10 +10,12 @@ public sealed class ClipboardHistoryPlugin : IQueryPlugin
 {
     private const int MaxResults = 20;
     private readonly ClipboardHistoryService _clipboardHistoryService;
+    private readonly FavoriteService? _favoriteService;
 
-    public ClipboardHistoryPlugin(ClipboardHistoryService clipboardHistoryService)
+    public ClipboardHistoryPlugin(ClipboardHistoryService clipboardHistoryService, FavoriteService? favoriteService = null)
     {
         _clipboardHistoryService = clipboardHistoryService;
+        _favoriteService = favoriteService;
     }
 
     public string Name => "Clipboard";
@@ -42,6 +44,45 @@ public sealed class ClipboardHistoryPlugin : IQueryPlugin
             ClipboardHistoryKind.Image => "Image",
             _ => "Text",
         };
+        var actions = new List<SearchAction>
+        {
+            new()
+            {
+                Label = "Copy to Clipboard",
+                HintLabel = "Copy",
+                Execute = () => _clipboardHistoryService.CopyEntryToClipboard(entry.Id),
+                KeyGesture = "Enter",
+            },
+            new()
+            {
+                Label = "Copy to Clipboard",
+                HintLabel = "Copy",
+                Execute = () => _clipboardHistoryService.CopyEntryToClipboard(entry.Id),
+                KeyGesture = "Ctrl+C",
+                ClosesLauncher = false,
+            },
+        };
+
+        if (_favoriteService is not null && FavoriteService.FromClipboard(entry) is { } favorite)
+            actions.Add(FavoriteService.CreateToggleAction(_favoriteService, favorite));
+
+        actions.Add(new SearchAction
+        {
+            Label = entry.IsPinned ? "Unpin Clipboard Entry" : "Pin Clipboard Entry",
+            HintLabel = entry.IsPinned ? "Unpin Clip" : "Pin Clip",
+            Execute = () => _clipboardHistoryService.TogglePinned(entry.Id),
+            KeyGesture = "Ctrl+K",
+            ClosesLauncher = false,
+            RefreshesResults = true,
+        });
+
+        actions.Add(new SearchAction
+        {
+            Label = "Delete Entry",
+            HintLabel = "Delete",
+            Execute = () => _clipboardHistoryService.DeleteEntry(entry.Id),
+            KeyGesture = "Ctrl+X",
+        });
 
         var result = new SearchResult
         {
@@ -55,38 +96,7 @@ public sealed class ClipboardHistoryPlugin : IQueryPlugin
                 ClipboardHistoryKind.Image => "\uD83D\uDDBC",
                 _ => "\uD83D\uDCCB",
             },
-            Actions =
-            [
-                new SearchAction
-                {
-                    Label = "Copy to Clipboard",
-                    HintLabel = "Copy",
-                    Execute = () => _clipboardHistoryService.CopyEntryToClipboard(entry.Id),
-                    KeyGesture = "Enter",
-                },
-                new SearchAction
-                {
-                    Label = "Copy to Clipboard",
-                    HintLabel = "Copy",
-                    Execute = () => _clipboardHistoryService.CopyEntryToClipboard(entry.Id),
-                    KeyGesture = "Ctrl+C",
-                    ClosesLauncher = false,
-                },
-                new SearchAction
-                {
-                    Label = entry.IsPinned ? "Unpin Entry" : "Pin Entry",
-                    HintLabel = entry.IsPinned ? "Unpin" : "Pin",
-                    Execute = () => _clipboardHistoryService.TogglePinned(entry.Id),
-                    KeyGesture = "Ctrl+P",
-                },
-                new SearchAction
-                {
-                    Label = "Delete Entry",
-                    HintLabel = "Delete",
-                    Execute = () => _clipboardHistoryService.DeleteEntry(entry.Id),
-                    KeyGesture = "Ctrl+X",
-                },
-            ],
+            Actions = actions,
         };
 
         if (entry.Kind == ClipboardHistoryKind.Image &&

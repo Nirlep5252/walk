@@ -1,5 +1,8 @@
+using System.IO;
 using FluentAssertions;
+using Walk.Models;
 using Walk.Plugins;
+using Walk.Services;
 
 namespace Walk.Tests.Plugins;
 
@@ -39,5 +42,31 @@ public class SystemCommandPluginTests
     {
         var results = await _plugin.QueryAsync(query, CancellationToken.None);
         results.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Pin_Action_Adds_System_Command_To_Favorites()
+    {
+        var testDir = Path.Combine(Path.GetTempPath(), "walk_systemcommandplugin_test_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(testDir);
+        try
+        {
+            var favoriteService = new FavoriteService(testDir);
+            var plugin = new SystemCommandPlugin(favoriteService);
+
+            var results = await plugin.QueryAsync("lock", CancellationToken.None);
+            var pinAction = results[0].Actions.Single(action => action.KeyGesture == "Ctrl+P");
+
+            pinAction.Execute();
+
+            favoriteService.GetEntries().Should().ContainSingle(entry =>
+                entry.Kind == FavoriteKind.SystemCommand &&
+                entry.Target == "Lock");
+        }
+        finally
+        {
+            if (Directory.Exists(testDir))
+                Directory.Delete(testDir, true);
+        }
     }
 }

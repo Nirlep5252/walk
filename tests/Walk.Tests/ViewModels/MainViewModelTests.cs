@@ -108,6 +108,25 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public async Task TryExecuteSelectedAction_Refreshes_Results_For_Refresh_Action()
+    {
+        var plugin = new RefreshingActionPlugin();
+        var viewModel = new MainViewModel(new QueryRouter([plugin]));
+        viewModel.Show();
+        viewModel.SearchText = "pin";
+        await WaitForAsync(
+            () => viewModel.Results.Select(result => result.Title).SequenceEqual(["Unpinned"]),
+            TimeSpan.FromSeconds(5));
+
+        viewModel.TryExecuteSelectedAction("Ctrl+P").Should().BeTrue();
+
+        await WaitForAsync(
+            () => viewModel.Results.Select(result => result.Title).SequenceEqual(["Pinned"]),
+            TimeSpan.FromSeconds(5));
+        viewModel.IsVisible.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task SearchAsync_Does_Not_Limit_Results_When_MaxResults_Is_Unbounded()
     {
         var plugin = new BulkResultPlugin(12);
@@ -468,6 +487,40 @@ public class MainViewModelTests
             ]);
 
             await Task.Delay(750, ct);
+        }
+    }
+
+    private sealed class RefreshingActionPlugin : IQueryPlugin
+    {
+        private bool _isPinned;
+        public string Name => "Refresh";
+        public int Priority => 1;
+
+        public Task<IReadOnlyList<SearchResult>> QueryAsync(string query, CancellationToken ct)
+        {
+            if (query != "pin")
+                return Task.FromResult<IReadOnlyList<SearchResult>>([]);
+
+            return Task.FromResult<IReadOnlyList<SearchResult>>(
+            [
+                new SearchResult
+                {
+                    Title = _isPinned ? "Pinned" : "Unpinned",
+                    PluginName = Name,
+                    Score = 1,
+                    Actions =
+                    [
+                        new SearchAction
+                        {
+                            Label = "Pin",
+                            Execute = () => _isPinned = true,
+                            KeyGesture = "Ctrl+P",
+                            ClosesLauncher = false,
+                            RefreshesResults = true,
+                        }
+                    ]
+                }
+            ]);
         }
     }
 }

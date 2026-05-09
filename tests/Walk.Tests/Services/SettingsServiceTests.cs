@@ -39,6 +39,7 @@ public class SettingsServiceTests : IDisposable
         settings.EnableClipboardHistory.Should().BeTrue();
         settings.EnableEmojiSymbols.Should().BeTrue();
         settings.EnableQuickLinks.Should().BeTrue();
+        settings.EnableFavorites.Should().BeTrue();
     }
 
     [Fact]
@@ -59,6 +60,7 @@ public class SettingsServiceTests : IDisposable
         settings.EnableClipboardHistory = false;
         settings.EnableEmojiSymbols = false;
         settings.EnableQuickLinks = false;
+        settings.EnableFavorites = false;
 
         await service.SaveAsync(settings);
 
@@ -76,5 +78,6 @@ public class SettingsServiceTests : IDisposable
         reloaded.EnableClipboardHistory.Should().BeFalse();
         reloaded.EnableEmojiSymbols.Should().BeFalse();
         reloaded.EnableQuickLinks.Should().BeFalse();
+        reloaded.EnableFavorites.Should().BeFalse();
     }
 }

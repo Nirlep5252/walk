@@ -16,10 +16,12 @@ public sealed class AppSearchPlugin : IQueryPlugin
     public int Priority => 50;
 
     private readonly IAppIndexService _indexService;
+    private readonly FavoriteService? _favoriteService;
 
-    public AppSearchPlugin(IAppIndexService indexService)
+    public AppSearchPlugin(IAppIndexService indexService, FavoriteService? favoriteService = null)
     {
         _indexService = indexService;
+        _favoriteService = favoriteService;
     }
 
     public Task<IReadOnlyList<SearchResult>> QueryAsync(string query, CancellationToken ct)
@@ -113,6 +115,9 @@ public sealed class AppSearchPlugin : IQueryPlugin
                 KeyGesture = "Ctrl+O"
             });
         }
+
+        if (_favoriteService is not null)
+            actions.Add(FavoriteService.CreateToggleAction(_favoriteService, FavoriteService.FromApp(entry)));
 
         var result = new SearchResult
         {

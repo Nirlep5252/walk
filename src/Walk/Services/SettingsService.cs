@@ -19,6 +19,7 @@ public sealed class WalkSettings
     public bool EnableClipboardHistory { get; set; } = true;
     public bool EnableEmojiSymbols { get; set; } = true;
     public bool EnableQuickLinks { get; set; } = true;
+    public bool EnableFavorites { get; set; } = true;
 
     public WalkSettings Clone()
     {
@@ -38,6 +39,7 @@ public sealed class WalkSettings
             EnableClipboardHistory = EnableClipboardHistory,
             EnableEmojiSymbols = EnableEmojiSymbols,
             EnableQuickLinks = EnableQuickLinks,
+            EnableFavorites = EnableFavorites,
         };
     }
 }
