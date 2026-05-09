@@ -37,6 +37,7 @@ public class SettingsServiceTests : IDisposable
         settings.EnableRunner.Should().BeTrue();
         settings.EnableFileSearch.Should().BeTrue();
         settings.EnableClipboardHistory.Should().BeTrue();
+        settings.EnableEmojiSymbols.Should().BeTrue();
     }
 
     [Fact]
@@ -55,6 +56,7 @@ public class SettingsServiceTests : IDisposable
         settings.EnableRunner = false;
         settings.EnableFileSearch = false;
         settings.EnableClipboardHistory = false;
+        settings.EnableEmojiSymbols = false;
 
         await service.SaveAsync(settings);
 
@@ -70,5 +72,6 @@ public class SettingsServiceTests : IDisposable
         reloaded.EnableRunner.Should().BeFalse();
         reloaded.EnableFileSearch.Should().BeFalse();
         reloaded.EnableClipboardHistory.Should().BeFalse();
+        reloaded.EnableEmojiSymbols.Should().BeFalse();
     }
 }

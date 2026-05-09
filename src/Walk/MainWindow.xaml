@@ -488,7 +488,7 @@
                                             Source="{Binding Icon}"
                                             Width="32"
                                             Height="32"
-                                            RenderOptions.BitmapScalingMode="LowQuality"
+                                            RenderOptions.BitmapScalingMode="HighQuality"
                                             Visibility="{Binding HasIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     </Grid>
 
@@ -614,7 +614,7 @@
                                                                         <Image
                                                                             Source="{Binding Result.Preview}"
                                                                             Stretch="Uniform"
-                                                                            RenderOptions.BitmapScalingMode="LowQuality"
+                                                                            RenderOptions.BitmapScalingMode="HighQuality"
                                                                             Visibility="{Binding Result.HasPreview, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                                                                         <Grid Visibility="{Binding Result.ShowsPreviewPlaceholder, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -632,7 +632,7 @@
                                                                                         Height="22"
                                                                                         HorizontalAlignment="Center"
                                                                                         VerticalAlignment="Center"
-                                                                                        RenderOptions.BitmapScalingMode="LowQuality"
+                                                                                        RenderOptions.BitmapScalingMode="HighQuality"
                                                                                         Visibility="{Binding Result.HasIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                                                                     <Path
                                                                                         Width="19"

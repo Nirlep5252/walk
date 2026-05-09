@@ -28,6 +28,7 @@ Current features include:
 - calculator results inline in the launcher
 - cached currency conversion
 - clipboard history search for text, files, and images with `clip`, `clipboard`, or `cb`
+- emoji and symbol picker with `emoji`, `em`, `symbol`, `sym`, or `:`
 - Windows Run commands, settings URIs, and shell folders
 - recent Run command recall
 - bundled fast file search with wildcard and filename queries

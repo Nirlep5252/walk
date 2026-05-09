@@ -61,6 +61,8 @@ public class SettingsViewModelTests
             EnableSystemCommands = true,
             EnableRunner = true,
             EnableFileSearch = true,
+            EnableClipboardHistory = true,
+            EnableEmojiSymbols = true,
         }, "0.2.0");
 
         viewModel.CalculatorEnabled = false;
@@ -68,6 +70,8 @@ public class SettingsViewModelTests
         viewModel.SystemCommandsEnabled = false;
         viewModel.RunnerEnabled = false;
         viewModel.FileSearchEnabled = false;
+        viewModel.ClipboardHistoryEnabled = false;
+        viewModel.EmojiSymbolsEnabled = false;
 
         var settings = viewModel.BuildSettings();
 
@@ -76,6 +80,8 @@ public class SettingsViewModelTests
         settings.EnableSystemCommands.Should().BeFalse();
         settings.EnableRunner.Should().BeFalse();
         settings.EnableFileSearch.Should().BeFalse();
+        settings.EnableClipboardHistory.Should().BeFalse();
+        settings.EnableEmojiSymbols.Should().BeFalse();
     }
 
     [Fact]

@@ -156,6 +156,31 @@ public class QueryRouterTests
     }
 
     [Fact]
+    public async Task RouteAsync_Prioritizes_Emoji_Result_Before_Web_Result()
+    {
+        var emojiPlugin = Substitute.For<IQueryPlugin>();
+        emojiPlugin.Name.Returns("Emoji");
+        emojiPlugin.Priority.Returns(1);
+        emojiPlugin.QueryAsync("emoji rocket", Arg.Any<CancellationToken>())
+            .Returns([
+                new SearchResult { Title = "🚀 Rocket", Score = 0.8, PluginName = "Emoji", Actions = [] }
+            ]);
+
+        var webPlugin = Substitute.For<IQueryPlugin>();
+        webPlugin.Name.Returns("Web");
+        webPlugin.Priority.Returns(1);
+        webPlugin.QueryAsync("emoji rocket", Arg.Any<CancellationToken>())
+            .Returns([
+                new SearchResult { Title = "Search the web", Score = 0.0, PluginName = "Web", Actions = [] }
+            ]);
+
+        var router = new QueryRouter([emojiPlugin, webPlugin]);
+        var results = await router.RouteAsync("emoji rocket", CancellationToken.None);
+
+        results.Select(result => result.PluginName).Should().ContainInOrder("Emoji", "Web");
+    }
+
+    [Fact]
     public async Task RouteAsync_Handles_Plugin_Exception_Gracefully()
     {
         var faultyPlugin = Substitute.For<IQueryPlugin>();

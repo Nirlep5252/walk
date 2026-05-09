@@ -17,6 +17,7 @@ public sealed class WalkSettings
     public bool EnableRunner { get; set; } = true;
     public bool EnableFileSearch { get; set; } = true;
     public bool EnableClipboardHistory { get; set; } = true;
+    public bool EnableEmojiSymbols { get; set; } = true;
 
     public WalkSettings Clone()
     {
@@ -34,6 +35,7 @@ public sealed class WalkSettings
             EnableRunner = EnableRunner,
             EnableFileSearch = EnableFileSearch,
             EnableClipboardHistory = EnableClipboardHistory,
+            EnableEmojiSymbols = EnableEmojiSymbols,
         };
     }
 }

@@ -44,6 +44,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _clipboardHistoryEnabled;
 
+    [ObservableProperty]
+    private bool _emojiSymbolsEnabled;
+
     public event Action? SaveRequested;
     public event Action? CancelRequested;
 
@@ -62,7 +65,8 @@ public partial class SettingsViewModel : ObservableObject
         _settings.EnableSystemCommands != SystemCommandsEnabled ||
         _settings.EnableRunner != RunnerEnabled ||
         _settings.EnableFileSearch != FileSearchEnabled ||
-        _settings.EnableClipboardHistory != ClipboardHistoryEnabled;
+        _settings.EnableClipboardHistory != ClipboardHistoryEnabled ||
+        _settings.EnableEmojiSymbols != EmojiSymbolsEnabled;
 
     public bool ShouldShowResetHotkey =>
         HotkeyService.CoerceModifiers(HotkeyModifiers) != ResetHotkeyModifiers ||
@@ -81,6 +85,7 @@ public partial class SettingsViewModel : ObservableObject
         _runnerEnabled = _settings.EnableRunner;
         _fileSearchEnabled = _settings.EnableFileSearch;
         _clipboardHistoryEnabled = _settings.EnableClipboardHistory;
+        _emojiSymbolsEnabled = _settings.EnableEmojiSymbols;
     }
 
     public WalkSettings BuildSettings()
@@ -95,6 +100,7 @@ public partial class SettingsViewModel : ObservableObject
         updatedSettings.EnableRunner = RunnerEnabled;
         updatedSettings.EnableFileSearch = FileSearchEnabled;
         updatedSettings.EnableClipboardHistory = ClipboardHistoryEnabled;
+        updatedSettings.EnableEmojiSymbols = EmojiSymbolsEnabled;
         return updatedSettings;
     }
 
@@ -225,6 +231,11 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     partial void OnClipboardHistoryEnabledChanged(bool value)
+    {
+        NotifyStateChanged();
+    }
+
+    partial void OnEmojiSymbolsEnabledChanged(bool value)
     {
         NotifyStateChanged();
     }
