@@ -111,6 +111,7 @@ public sealed class SearchResult : ObservableObject
     {
         "Apps" => IconGeometry.Apps,
         "Calculator" => IconGeometry.Calculator,
+        "Clipboard" => IconGeometry.TextBulletList,
         "Currency" => IconGeometry.Calculator,
         "Files" => IconGeometry.Document,
         "Run" => IconGeometry.WindowApps,
@@ -124,6 +125,7 @@ public sealed class SearchResult : ObservableObject
         return PluginName switch
         {
             "Calculator" => "=",
+            "Clipboard" => "\uD83D\uDCCB",
             "Currency" => "$",
             "Files" => "\uD83D\uDCC4",
             "Run" => "\u25B6",

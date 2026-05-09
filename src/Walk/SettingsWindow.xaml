@@ -179,6 +179,31 @@
                             <StackPanel Grid.Column="0" Margin="0,0,20,0">
                                 <TextBlock
                                     Style="{StaticResource RowTitle}"
+                                    Text="Clipboard History" />
+                                <TextBlock
+                                    Style="{StaticResource RowDescription}"
+                                    Text="Save recent copied text, file lists, and images for explicit clip or clipboard searches." />
+                            </StackPanel>
+
+                            <ui:ToggleSwitch
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding ClipboardHistoryEnabled}"
+                                OffContent="Off"
+                                OnContent="On" />
+                        </Grid>
+
+                        <Rectangle Style="{StaticResource RowDivider}" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                                <TextBlock
+                                    Style="{StaticResource RowTitle}"
                                     Text="Auto Start on Login" />
                                 <TextBlock
                                     Style="{StaticResource RowDescription}"

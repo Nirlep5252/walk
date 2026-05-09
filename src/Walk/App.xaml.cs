@@ -34,6 +34,7 @@ public partial class App : System.Windows.Application
     private SettingsWindow? _settingsWindow;
     private SettingsViewModel? _settingsViewModel;
     private WhatsNewWindow? _whatsNewWindow;
+    private ClipboardHistoryService? _clipboardHistoryService;
 
     public App()
     {
@@ -63,6 +64,7 @@ public partial class App : System.Windows.Application
         _changelogService = new ChangelogService(dataDir);
         _updateService = new UpdateService(_changelogService);
         _runHistoryService = new RunHistoryService(dataDir);
+        _clipboardHistoryService = new ClipboardHistoryService(dataDir);
         _everythingRuntime = new EverythingBundledRuntime(dataDir);
         _everythingSearchService = new EverythingSearchService(_everythingRuntime);
         _defaultBrowserService = new DefaultBrowserService();
@@ -100,7 +102,8 @@ public partial class App : System.Windows.Application
 
         // Hotkey - need a window handle, show briefly then hide
         _mainWindow.Show();
-        var handle = new System.Windows.Interop.WindowInteropHelper(_mainWindow).Handle;
+        _ = new System.Windows.Interop.WindowInteropHelper(_mainWindow).Handle;
+        ConfigureClipboardHistory(_settings.EnableClipboardHistory);
         _mainWindow.Hide();
 
         _hotkeyService = new HotkeyService();
@@ -373,6 +376,7 @@ public partial class App : System.Windows.Application
         _settings = updatedSettings;
         if (_settings.EnableFileSearch)
             _everythingRuntime?.EnsureStarted();
+        ConfigureClipboardHistory(_settings.EnableClipboardHistory);
         _router?.UpdatePlugins(BuildPlugins(_settings));
 
         try
@@ -440,6 +444,9 @@ public partial class App : System.Windows.Application
         if (settings.EnableRunner)
             plugins.Add(new RunPlugin(_runHistoryService));
 
+        if (settings.EnableClipboardHistory && _clipboardHistoryService is not null)
+            plugins.Add(new ClipboardHistoryPlugin(_clipboardHistoryService));
+
         plugins.Add(new AppSearchPlugin(_indexService));
         if (_defaultBrowserService is not null)
             plugins.Add(new WebSearchPlugin(_defaultBrowserService));
@@ -450,11 +457,27 @@ public partial class App : System.Windows.Application
         return plugins;
     }
 
+    private void ConfigureClipboardHistory(bool enable)
+    {
+        if (_mainWindow is null || _clipboardHistoryService is null)
+            return;
+
+        if (!enable)
+        {
+            _clipboardHistoryService.StopListening();
+            return;
+        }
+
+        var handle = new WindowInteropHelper(_mainWindow).Handle;
+        _clipboardHistoryService.StartListening(handle);
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
         _singleInstanceManager?.Dispose();
         _hotkeyService?.Dispose();
         _indexService?.Dispose();
+        _clipboardHistoryService?.Dispose();
         _everythingSearchService?.Dispose();
         _everythingRuntime?.Dispose();
         _updateService?.Dispose();

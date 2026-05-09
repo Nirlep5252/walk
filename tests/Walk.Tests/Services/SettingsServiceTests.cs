@@ -36,6 +36,7 @@ public class SettingsServiceTests : IDisposable
         settings.EnableSystemCommands.Should().BeTrue();
         settings.EnableRunner.Should().BeTrue();
         settings.EnableFileSearch.Should().BeTrue();
+        settings.EnableClipboardHistory.Should().BeTrue();
     }
 
     [Fact]
@@ -53,6 +54,7 @@ public class SettingsServiceTests : IDisposable
         settings.EnableSystemCommands = false;
         settings.EnableRunner = false;
         settings.EnableFileSearch = false;
+        settings.EnableClipboardHistory = false;
 
         await service.SaveAsync(settings);
 
@@ -67,5 +69,6 @@ public class SettingsServiceTests : IDisposable
         reloaded.EnableSystemCommands.Should().BeFalse();
         reloaded.EnableRunner.Should().BeFalse();
         reloaded.EnableFileSearch.Should().BeFalse();
+        reloaded.EnableClipboardHistory.Should().BeFalse();
     }
 }

@@ -16,6 +16,7 @@ public sealed class WalkSettings
     public bool EnableSystemCommands { get; set; } = true;
     public bool EnableRunner { get; set; } = true;
     public bool EnableFileSearch { get; set; } = true;
+    public bool EnableClipboardHistory { get; set; } = true;
 
     public WalkSettings Clone()
     {
@@ -32,6 +33,7 @@ public sealed class WalkSettings
             EnableSystemCommands = EnableSystemCommands,
             EnableRunner = EnableRunner,
             EnableFileSearch = EnableFileSearch,
+            EnableClipboardHistory = EnableClipboardHistory,
         };
     }
 }

@@ -41,6 +41,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _fileSearchEnabled;
 
+    [ObservableProperty]
+    private bool _clipboardHistoryEnabled;
+
     public event Action? SaveRequested;
     public event Action? CancelRequested;
 
@@ -58,7 +61,8 @@ public partial class SettingsViewModel : ObservableObject
         _settings.EnableCurrencyConverter != CurrencyConverterEnabled ||
         _settings.EnableSystemCommands != SystemCommandsEnabled ||
         _settings.EnableRunner != RunnerEnabled ||
-        _settings.EnableFileSearch != FileSearchEnabled;
+        _settings.EnableFileSearch != FileSearchEnabled ||
+        _settings.EnableClipboardHistory != ClipboardHistoryEnabled;
 
     public bool ShouldShowResetHotkey =>
         HotkeyService.CoerceModifiers(HotkeyModifiers) != ResetHotkeyModifiers ||
@@ -76,6 +80,7 @@ public partial class SettingsViewModel : ObservableObject
         _systemCommandsEnabled = _settings.EnableSystemCommands;
         _runnerEnabled = _settings.EnableRunner;
         _fileSearchEnabled = _settings.EnableFileSearch;
+        _clipboardHistoryEnabled = _settings.EnableClipboardHistory;
     }
 
     public WalkSettings BuildSettings()
@@ -89,6 +94,7 @@ public partial class SettingsViewModel : ObservableObject
         updatedSettings.EnableSystemCommands = SystemCommandsEnabled;
         updatedSettings.EnableRunner = RunnerEnabled;
         updatedSettings.EnableFileSearch = FileSearchEnabled;
+        updatedSettings.EnableClipboardHistory = ClipboardHistoryEnabled;
         return updatedSettings;
     }
 
@@ -214,6 +220,11 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     partial void OnFileSearchEnabledChanged(bool value)
+    {
+        NotifyStateChanged();
+    }
+
+    partial void OnClipboardHistoryEnabledChanged(bool value)
     {
         NotifyStateChanged();
     }

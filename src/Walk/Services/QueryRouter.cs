@@ -186,9 +186,10 @@ public sealed class QueryRouter
     {
         return result.PluginName switch
         {
-            "Apps" => 0,
-            "Web" => 1,
-            _ => result.PluginName == "Files" ? 3 : 2,
+            "Clipboard" => 0,
+            "Apps" => 1,
+            "Web" => 2,
+            _ => result.PluginName == "Files" ? 4 : 3,
         };
     }
 
