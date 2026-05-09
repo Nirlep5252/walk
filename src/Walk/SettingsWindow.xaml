@@ -218,6 +218,31 @@
                             <StackPanel Grid.Column="0" Margin="0,0,20,0">
                                 <TextBlock
                                     Style="{StaticResource RowTitle}"
+                                    Text="Quicklinks" />
+                                <TextBlock
+                                    Style="{StaticResource RowDescription}"
+                                    Text="Open saved URLs, paths, and query templates with aliases like gh walk or ql GitHub." />
+                            </StackPanel>
+
+                            <ui:ToggleSwitch
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding QuickLinksEnabled}"
+                                OffContent="Off"
+                                OnContent="On" />
+                        </Grid>
+
+                        <Rectangle Style="{StaticResource RowDivider}" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                                <TextBlock
+                                    Style="{StaticResource RowTitle}"
                                     Text="Emoji and Symbols" />
                                 <TextBlock
                                     Style="{StaticResource RowDescription}"

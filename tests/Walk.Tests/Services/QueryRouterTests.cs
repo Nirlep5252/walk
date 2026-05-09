@@ -181,6 +181,31 @@ public class QueryRouterTests
     }
 
     [Fact]
+    public async Task RouteAsync_Prioritizes_Quicklink_Result_Before_Web_Result()
+    {
+        var quickLinkPlugin = Substitute.For<IQueryPlugin>();
+        quickLinkPlugin.Name.Returns("Quicklinks");
+        quickLinkPlugin.Priority.Returns(1);
+        quickLinkPlugin.QueryAsync("gh walk", Arg.Any<CancellationToken>())
+            .Returns([
+                new SearchResult { Title = "Open GitHub Search for walk", Score = 0.99, PluginName = "Quicklinks", Actions = [] }
+            ]);
+
+        var webPlugin = Substitute.For<IQueryPlugin>();
+        webPlugin.Name.Returns("Web");
+        webPlugin.Priority.Returns(1);
+        webPlugin.QueryAsync("gh walk", Arg.Any<CancellationToken>())
+            .Returns([
+                new SearchResult { Title = "Search the web", Score = 0.0, PluginName = "Web", Actions = [] }
+            ]);
+
+        var router = new QueryRouter([quickLinkPlugin, webPlugin]);
+        var results = await router.RouteAsync("gh walk", CancellationToken.None);
+
+        results.Select(result => result.PluginName).Should().ContainInOrder("Quicklinks", "Web");
+    }
+
+    [Fact]
     public async Task RouteAsync_Handles_Plugin_Exception_Gracefully()
     {
         var faultyPlugin = Substitute.For<IQueryPlugin>();

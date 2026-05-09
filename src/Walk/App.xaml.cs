@@ -36,6 +36,7 @@ public partial class App : System.Windows.Application
     private WhatsNewWindow? _whatsNewWindow;
     private ClipboardHistoryService? _clipboardHistoryService;
     private TwemojiImageService? _twemojiImageService;
+    private QuickLinkService? _quickLinkService;
 
     public App()
     {
@@ -67,6 +68,7 @@ public partial class App : System.Windows.Application
         _runHistoryService = new RunHistoryService(dataDir);
         _clipboardHistoryService = new ClipboardHistoryService(dataDir);
         _twemojiImageService = new TwemojiImageService(dataDir);
+        _quickLinkService = new QuickLinkService(dataDir);
         _everythingRuntime = new EverythingBundledRuntime(dataDir);
         _everythingSearchService = new EverythingSearchService(_everythingRuntime);
         _defaultBrowserService = new DefaultBrowserService();
@@ -451,6 +453,9 @@ public partial class App : System.Windows.Application
 
         if (settings.EnableEmojiSymbols)
             plugins.Add(new EmojiSymbolPlugin(_twemojiImageService));
+
+        if (settings.EnableQuickLinks && _quickLinkService is not null)
+            plugins.Add(new QuickLinkPlugin(_quickLinkService));
 
         plugins.Add(new AppSearchPlugin(_indexService));
         if (_defaultBrowserService is not null)

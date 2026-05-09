@@ -63,6 +63,7 @@ public class SettingsViewModelTests
             EnableFileSearch = true,
             EnableClipboardHistory = true,
             EnableEmojiSymbols = true,
+            EnableQuickLinks = true,
         }, "0.2.0");
 
         viewModel.CalculatorEnabled = false;
@@ -72,6 +73,7 @@ public class SettingsViewModelTests
         viewModel.FileSearchEnabled = false;
         viewModel.ClipboardHistoryEnabled = false;
         viewModel.EmojiSymbolsEnabled = false;
+        viewModel.QuickLinksEnabled = false;
 
         var settings = viewModel.BuildSettings();
 
@@ -82,6 +84,7 @@ public class SettingsViewModelTests
         settings.EnableFileSearch.Should().BeFalse();
         settings.EnableClipboardHistory.Should().BeFalse();
         settings.EnableEmojiSymbols.Should().BeFalse();
+        settings.EnableQuickLinks.Should().BeFalse();
     }
 
     [Fact]

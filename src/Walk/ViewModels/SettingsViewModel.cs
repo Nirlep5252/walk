@@ -47,6 +47,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _emojiSymbolsEnabled;
 
+    [ObservableProperty]
+    private bool _quickLinksEnabled;
+
     public event Action? SaveRequested;
     public event Action? CancelRequested;
 
@@ -66,7 +69,8 @@ public partial class SettingsViewModel : ObservableObject
         _settings.EnableRunner != RunnerEnabled ||
         _settings.EnableFileSearch != FileSearchEnabled ||
         _settings.EnableClipboardHistory != ClipboardHistoryEnabled ||
-        _settings.EnableEmojiSymbols != EmojiSymbolsEnabled;
+        _settings.EnableEmojiSymbols != EmojiSymbolsEnabled ||
+        _settings.EnableQuickLinks != QuickLinksEnabled;
 
     public bool ShouldShowResetHotkey =>
         HotkeyService.CoerceModifiers(HotkeyModifiers) != ResetHotkeyModifiers ||
@@ -86,6 +90,7 @@ public partial class SettingsViewModel : ObservableObject
         _fileSearchEnabled = _settings.EnableFileSearch;
         _clipboardHistoryEnabled = _settings.EnableClipboardHistory;
         _emojiSymbolsEnabled = _settings.EnableEmojiSymbols;
+        _quickLinksEnabled = _settings.EnableQuickLinks;
     }
 
     public WalkSettings BuildSettings()
@@ -101,6 +106,7 @@ public partial class SettingsViewModel : ObservableObject
         updatedSettings.EnableFileSearch = FileSearchEnabled;
         updatedSettings.EnableClipboardHistory = ClipboardHistoryEnabled;
         updatedSettings.EnableEmojiSymbols = EmojiSymbolsEnabled;
+        updatedSettings.EnableQuickLinks = QuickLinksEnabled;
         return updatedSettings;
     }
 
@@ -236,6 +242,11 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     partial void OnEmojiSymbolsEnabledChanged(bool value)
+    {
+        NotifyStateChanged();
+    }
+
+    partial void OnQuickLinksEnabledChanged(bool value)
     {
         NotifyStateChanged();
     }
